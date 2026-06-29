@@ -1,1 +1,3 @@
 # StreamKill
+
+Project bootstrap setup.
