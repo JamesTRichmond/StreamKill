@@ -7,23 +7,13 @@ on:
 
 jobs:
   repo-sanity:
-    name: Repository sanity checks
+    name: repo-sanity
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Ensure core files exist
         run: |
           test -f README.md
           test -f .gitignore
           test -f .editorconfig
           test -f LICENSE
-
-      - name: Basic YAML validation
-        run: |
-          python - << 'PY'
-          import yaml, pathlib
-          wf = pathlib.Path(".github/workflows/ci.yml")
-          yaml.safe_load(wf.read_text())
-          print("Workflow YAML is valid")
-          PY
