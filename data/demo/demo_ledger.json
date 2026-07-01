@@ -1,0 +1,51 @@
+{
+  "demo_user": "redacted-demo-user",
+  "generated_at": "2026-07-01T14:30:00Z",
+  "currency": "USD",
+  "summary": {
+    "detected_monthly_bleed": 40.96,
+    "detected_annual_bleed": 491.52,
+    "safe_to_kill_annual": 251.76,
+    "requires_review_annual": 203.88,
+    "blocked_by_policy_annual": 35.88,
+    "approved_for_cancellation_annual": 251.76
+  },
+  "subscriptions": [
+    {
+      "id": "sub_youtube_premium",
+      "service": "YouTube Premium",
+      "amount_monthly": 13.99,
+      "amount_annual": 167.88,
+      "confidence": 0.98,
+      "safety_label": "Safe kill",
+      "status": "verified_canceled_for_demo"
+    },
+    {
+      "id": "sub_dropout",
+      "service": "Dropout",
+      "amount_monthly": 6.99,
+      "amount_annual": 83.88,
+      "confidence": 0.96,
+      "safety_label": "Safe kill",
+      "status": "verified_canceled_for_demo"
+    },
+    {
+      "id": "sub_music_family",
+      "service": "Redacted Music Family Plan",
+      "amount_monthly": 16.99,
+      "amount_annual": 203.88,
+      "confidence": 0.82,
+      "safety_label": "Confirm first",
+      "status": "needs_user_review"
+    },
+    {
+      "id": "sub_cloud_storage",
+      "service": "Redacted Cloud Storage",
+      "amount_monthly": 2.99,
+      "amount_annual": 35.88,
+      "confidence": 0.91,
+      "safety_label": "Do not auto-kill",
+      "status": "blocked_by_safety_policy"
+    }
+  ]
+}
