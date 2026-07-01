@@ -69,16 +69,17 @@ export async function runScan(
 
 // Client for the private Python engine service. Contract shape and error
 // semantics are the authoritative spec in ENGINE_CONTRACT.md — the engine must
-// match it byte-for-byte.
+// match it byte-for-byte. ENGINE_URL is the FULL scan endpoint
+// (e.g. http://localhost:8787/scan), posted to as-is.
 async function callEngine(
-  baseUrl: string,
+  endpoint: string,
   signed: SignedContract,
   connectedInbox: string,
   tokenRef?: string,
 ): Promise<Ledger> {
   let res: Response;
   try {
-    res = await fetch(`${baseUrl.replace(/\/$/, "")}/scan`, {
+    res = await fetch(endpoint, {
       method: "POST",
       headers: { "content-type": "application/json" },
       cache: "no-store",

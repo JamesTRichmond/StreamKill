@@ -11,10 +11,16 @@ Owner of issuer side: Central Command (Nazarick). Owner of verifier side: Ainz.
 
 ## 1. Endpoint
 
+`ENGINE_URL` is the **full scan endpoint** (not a base). The web client POSTs to
+it as-is.
+
 ```
-POST {ENGINE_URL}/scan
+POST {ENGINE_URL}          # e.g. http://localhost:8787/scan
 Content-Type: application/json
 ```
+
+Health check is a sibling on the service, engine's choice (e.g.
+`GET http://localhost:8787/health`) — the web app only calls `ENGINE_URL`.
 
 Request body:
 
