@@ -49,15 +49,59 @@ function enforce(signed: SignedContract | undefined, connectedInboxEmail: string
 export async function runScan(
   signed: SignedContract | undefined,
   connectedInboxEmail: string,
+  opts?: { tokenRef?: string },
 ): Promise<Ledger> {
+  // Gate #1: the web boundary. (Gate #2 is the Python engine re-verifying the
+  // same contract server-side — defense in depth. See ENGINE_CONTRACT.md.)
   const ok = enforce(signed, connectedInboxEmail);
   if (!ok.contract.allowed_actions.scan_receipts || !ok.contract.allowed_actions.build_ledger) {
     throw new ExecutionRefused("action_not_allowed", "Contract does not permit scanning. Refusing to run.");
   }
-  // PHASE 3: forward the contract + a fresh read-only token to the private
-  // engine service (process.env.ENGINE_URL) which reads receipts and returns
-  // the ledger. It re-verifies the contract before touching any mail.
+
+  const engineUrl = process.env.ENGINE_URL;
+  if (engineUrl) {
+    return callEngine(engineUrl, ok, connectedInboxEmail, opts?.tokenRef);
+  }
+  // No engine configured (dev): local sample ledger so the UI/flow is testable
+  // without the Python service running.
   return buildLedger(ok.contract.allowed_inbox_email);
+}
+
+// Client for the private Python engine service. Contract shape and error
+// semantics are the authoritative spec in ENGINE_CONTRACT.md — the engine must
+// match it byte-for-byte.
+async function callEngine(
+  baseUrl: string,
+  signed: SignedContract,
+  connectedInbox: string,
+  tokenRef?: string,
+): Promise<Ledger> {
+  let res: Response;
+  try {
+    res = await fetch(`${baseUrl.replace(/\/$/, "")}/scan`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      cache: "no-store",
+      body: JSON.stringify({
+        execution_contract: signed.contract,
+        signature: signed.signature,
+        connected_inbox: connectedInbox,
+        token_ref: tokenRef ?? null,
+      }),
+    });
+  } catch {
+    throw new ExecutionRefused("engine_unreachable", "The scan engine is unreachable. Try again shortly.");
+  }
+  if (res.status === 403) {
+    throw new ExecutionRefused(
+      "engine_refused",
+      "The engine refused the contract (email mismatch, or invalid/expired contract).",
+    );
+  }
+  if (!res.ok) {
+    throw new ExecutionRefused("engine_error", `Engine returned HTTP ${res.status}.`);
+  }
+  return (await res.json()) as Ledger;
 }
 
 // Cancellation is intentionally a stub. No route exposes it yet. It refuses
