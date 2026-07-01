@@ -1,37 +1,42 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
+import { upsertUser } from "@/lib/store";
 
-// Read-only Gmail scope. This is the whole trust model:
-// Google issues a short-lived, look-only token. We never see a password,
-// we never get write/delete access, and we discard the token after building
-// the ledger. Cancellation is a separate, user-approved action.
-export const GMAIL_READONLY = "https://www.googleapis.com/auth/gmail.readonly";
-
+// Identity sign-in ONLY. This proves who the customer is (verified_email) and
+// creates their user record. It deliberately does NOT request Gmail access —
+// inbox access is a separate "Connect your Gmail" step (see lib/google-oauth.ts
+// and /api/gmail/*). Keeping identity and inbox grant apart is what lets us
+// catch a login that tries to connect a different mailbox.
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  // Required when self-hosting (non-Vercel): trust the deployment host so
+  // Auth.js will serve /api/auth/* behind streamkill.ai or localhost.
+  trustHost: true,
   providers: [
     Google({
-      authorization: {
-        params: {
-          scope: `openid email profile ${GMAIL_READONLY}`,
-          // "online" access — no refresh token, nothing long-lived to store.
-          access_type: "online",
-          prompt: "consent",
-        },
-      },
+      authorization: { params: { scope: "openid email profile" } },
     }),
   ],
   callbacks: {
-    async jwt({ token, account }) {
-      // Capture the access token ONLY at sign-in. It rides inside the
-      // encrypted session cookie, is used once to build the ledger, and is
-      // never persisted in any server-side store or database.
-      if (account?.access_token) {
-        token.accessToken = account.access_token;
+    async jwt({ token, account, profile }) {
+      if (account && profile?.email) {
+        const user = upsertUser({
+          provider: account.provider,
+          providerAccountId: account.providerAccountId,
+          email: profile.email,
+        });
+        token.userId = user.id;
+        token.verifiedEmail = user.verified_email;
       }
       return token;
     },
     async session({ session, token }) {
-      session.accessToken = token.accessToken as string | undefined;
+      const userId = token.userId as string | undefined;
+      const verifiedEmail = token.verifiedEmail as string | undefined;
+      if (userId) session.userId = userId;
+      if (verifiedEmail) {
+        session.verifiedEmail = verifiedEmail;
+        if (session.user) session.user.email = verifiedEmail;
+      }
       return session;
     },
   },

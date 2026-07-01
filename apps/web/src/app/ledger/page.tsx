@@ -1,7 +1,13 @@
 import { auth, signOut } from "@/auth";
 import { redirect } from "next/navigation";
-import { buildLedger, type LeakItem } from "@/lib/ledger";
-import { resolveScanTarget, MailboxBindingError } from "@/lib/gmail";
+import type { LeakItem } from "@/lib/ledger";
+import {
+  getUserById,
+  getScanSession,
+  latestReadySession,
+  getContract,
+} from "@/lib/store";
+import { runScan, ExecutionRefused } from "@/lib/engine";
 
 const money = (n: number) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -20,7 +26,7 @@ const STATUS_STYLE: Record<LeakItem["status"], string> = {
   blocked: "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
 };
 
-async function SignOutButton({ label = "Sign out" }: { label?: string }) {
+function SignOutButton({ label = "Sign out" }: { label?: string }) {
   return (
     <form
       action={async () => {
@@ -38,44 +44,63 @@ async function SignOutButton({ label = "Sign out" }: { label?: string }) {
   );
 }
 
-export default async function LedgerPage() {
+export default async function LedgerPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ session?: string }>;
+}) {
   const session = await auth();
-  if (!session) redirect("/");
+  if (!session?.userId) redirect("/");
+  const user = getUserById(session.userId);
+  if (!user) redirect("/");
 
-  // Bind the scan target to the authenticated Google account. This asks Gmail
-  // which inbox the token belongs to and refuses if it isn't the login. The
-  // user never gets to type or choose a mailbox.
-  let mailbox: string;
+  // Resolve the scan_session — must belong to this user.
+  const { session: sessionId } = await searchParams;
+  const scan = sessionId ? getScanSession(sessionId) : latestReadySession(user.id);
+  if (!scan || scan.user_id !== user.id) redirect("/scan");
+
+  const signed = getContract(scan.id);
+
+  // Run through the engine boundary. It refuses unless the signed contract is
+  // valid and every email matches. We pass the contract's own allowed inbox as
+  // the "connected inbox" it is about to act on.
+  let ledger;
   try {
-    mailbox = await resolveScanTarget(session.accessToken, session.user?.email);
+    ledger = await runScan(signed, signed?.contract.allowed_inbox_email ?? "");
   } catch (err) {
-    const message =
-      err instanceof MailboxBindingError
-        ? err.message
-        : "Could not verify your mailbox. Please sign in again.";
+    const refused = err instanceof ExecutionRefused;
     return (
       <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 px-6 py-24 font-sans dark:bg-black">
         <main className="w-full max-w-md text-center">
-          <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-2xl">
-            ⚠️
+          <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-2xl dark:bg-red-950/50">
+            🛑
           </div>
           <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">
-            We couldn&apos;t confirm your mailbox
+            Engine refused to run
           </h1>
-          <p className="mt-3 text-zinc-600 dark:text-zinc-400">{message}</p>
+          <p className="mt-3 text-zinc-600 dark:text-zinc-400">
+            {refused
+              ? (err as ExecutionRefused).message
+              : "The scan could not be started."}
+          </p>
           <p className="mt-2 text-sm text-zinc-500">
-            StreamKill only ever scans the exact Google account you sign in
-            with — nothing else.
+            StreamKill only runs on the verified account owner&apos;s inbox,
+            under a valid execution contract.
           </p>
           <div className="mt-6 flex justify-center">
-            <SignOutButton label="Sign in again" />
+            <a
+              href="/scan"
+              className="inline-flex h-11 items-center rounded-full bg-black px-5 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+            >
+              Start over
+            </a>
           </div>
         </main>
       </div>
     );
   }
 
-  const ledger = await buildLedger(mailbox, session.accessToken);
+  const mailbox = signed!.contract.allowed_inbox_email;
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50 px-6 py-12 font-sans dark:bg-black">
@@ -86,29 +111,25 @@ export default async function LedgerPage() {
               Leak Ledger
             </p>
             <h1 className="mt-1 text-2xl font-semibold text-black dark:text-zinc-50">
-              {session.user?.name
-                ? `${session.user.name.split(" ")[0]}'s subscriptions`
-                : "Your subscriptions"}
+              Your subscriptions
             </h1>
           </div>
           <SignOutButton />
         </div>
 
-        {/* Locked, non-editable scan target — bound to the Google login. */}
+        {/* Bound scan target — the verified, contract-locked inbox. */}
         <div className="mt-5 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/50 dark:bg-emerald-950/30">
           <span className="text-lg" aria-hidden>
             🔒
           </span>
           <div className="min-w-0 text-sm">
-            <span className="text-emerald-800 dark:text-emerald-300">
-              Scanning{" "}
-            </span>
+            <span className="text-emerald-800 dark:text-emerald-300">Scanning </span>
             <span className="font-semibold text-emerald-900 dark:text-emerald-200">
               {mailbox}
             </span>
             <span className="text-emerald-700/80 dark:text-emerald-400/80">
               {" "}
-              — the only inbox this login can access. Read-only.
+              — verified owner, under a signed contract. Read-only.
             </span>
           </div>
         </div>
@@ -139,8 +160,8 @@ export default async function LedgerPage() {
                   {item.service}
                 </p>
                 <p className="text-sm text-zinc-500">
-                  {money(item.amount)}/{item.cadence === "annual" ? "yr" : "mo"}{" "}
-                  · last seen {item.lastSeen}
+                  {money(item.amount)}/{item.cadence === "annual" ? "yr" : "mo"} ·
+                  last seen {item.lastSeen}
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -149,9 +170,12 @@ export default async function LedgerPage() {
                 >
                   {STATUS_LABEL[item.status]}
                 </span>
+                {/* Cancellation is disabled by contract — stub only, needs
+                    per-item owner approval. Kept non-functional for now. */}
                 <button
-                  disabled={item.status === "blocked"}
-                  className="rounded-full bg-black px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-30 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+                  disabled
+                  title="Cancellation is not enabled yet — requires your per-item approval."
+                  className="cursor-not-allowed rounded-full bg-black px-4 py-2 text-sm font-medium text-white opacity-30 dark:bg-white dark:text-black"
                 >
                   Cancel
                 </button>
@@ -161,8 +185,8 @@ export default async function LedgerPage() {
         </ul>
 
         <p className="mt-6 text-center text-xs text-zinc-500">
-          Read-only scan complete · scanning is not canceling · nothing is
-          canceled without your approval.
+          Read-only scan · scanning is not canceling · cancellation stays off
+          until you approve each item.
         </p>
       </main>
     </div>
