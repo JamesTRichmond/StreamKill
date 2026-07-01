@@ -1,0 +1,56 @@
+{
+  "version": "demo-2026-07-03",
+  "routes": [
+    {
+      "service": "YouTube Premium",
+      "route_type": "account_settings",
+      "start_url": "https://www.youtube.com/paid_memberships",
+      "steps": [
+        "Open paid memberships",
+        "Select YouTube Premium membership",
+        "Choose manage membership",
+        "Choose deactivate or cancel",
+        "Pause at final confirmation for user approval"
+      ],
+      "human_gates": ["final_confirmation", "mfa_if_prompted"],
+      "automation_level": "guarded"
+    },
+    {
+      "service": "Dropout",
+      "route_type": "account_billing",
+      "start_url": "https://www.dropout.tv/settings/billing",
+      "steps": [
+        "Open account billing settings",
+        "Find active subscription",
+        "Choose cancel membership",
+        "Confirm cancellation only after user approval"
+      ],
+      "human_gates": ["final_confirmation"],
+      "automation_level": "guarded"
+    },
+    {
+      "service": "Music Family Plan",
+      "route_type": "provider_settings",
+      "start_url": "provider_account_subscription_settings",
+      "steps": [
+        "Open subscription settings",
+        "Detect family/shared plan warning",
+        "Stop and request user review"
+      ],
+      "human_gates": ["shared_plan_review"],
+      "automation_level": "review_only"
+    },
+    {
+      "service": "Cloud Storage",
+      "route_type": "provider_settings",
+      "start_url": "provider_storage_plan_settings",
+      "steps": [
+        "Open storage plan settings",
+        "Detect data-loss or downgrade risk",
+        "Block automatic cancellation"
+      ],
+      "human_gates": ["manual_review_required"],
+      "automation_level": "blocked"
+    }
+  ]
+}
