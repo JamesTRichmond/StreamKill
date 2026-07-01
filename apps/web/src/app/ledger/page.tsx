@@ -1,0 +1,111 @@
+import { auth, signOut } from "@/auth";
+import { redirect } from "next/navigation";
+import { buildLedger, type LeakItem } from "@/lib/ledger";
+
+const money = (n: number) =>
+  n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+
+const STATUS_LABEL: Record<LeakItem["status"], string> = {
+  safe_to_cancel: "Safe to cancel",
+  review: "Review",
+  blocked: "Blocked",
+};
+
+const STATUS_STYLE: Record<LeakItem["status"], string> = {
+  safe_to_cancel:
+    "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
+  review:
+    "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
+  blocked: "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+};
+
+export default async function LedgerPage() {
+  const session = await auth();
+  if (!session) redirect("/");
+
+  const ledger = await buildLedger(session.accessToken);
+
+  return (
+    <div className="flex flex-1 flex-col bg-zinc-50 px-6 py-12 font-sans dark:bg-black">
+      <main className="mx-auto w-full max-w-3xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium uppercase tracking-widest text-emerald-600">
+              Leak Ledger
+            </p>
+            <h1 className="mt-1 text-2xl font-semibold text-black dark:text-zinc-50">
+              {session.user?.name
+                ? `${session.user.name.split(" ")[0]}'s subscriptions`
+                : "Your subscriptions"}
+            </h1>
+          </div>
+          <form
+            action={async () => {
+              "use server";
+              await signOut({ redirectTo: "/" });
+            }}
+          >
+            <button
+              type="submit"
+              className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
+
+        <div className="mt-6 grid grid-cols-2 gap-4">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
+            <p className="text-sm text-zinc-500">Bleeding per month</p>
+            <p className="mt-1 text-3xl font-semibold text-black dark:text-zinc-50">
+              {money(ledger.monthlyTotal)}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
+            <p className="text-sm text-zinc-500">Per year</p>
+            <p className="mt-1 text-3xl font-semibold text-black dark:text-zinc-50">
+              {money(ledger.annualTotal)}
+            </p>
+          </div>
+        </div>
+
+        <ul className="mt-6 divide-y divide-zinc-200 overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-950">
+          {ledger.items.map((item) => (
+            <li
+              key={item.service}
+              className="flex items-center justify-between gap-4 p-4"
+            >
+              <div className="min-w-0">
+                <p className="truncate font-medium text-black dark:text-zinc-100">
+                  {item.service}
+                </p>
+                <p className="text-sm text-zinc-500">
+                  {money(item.amount)}/{item.cadence === "annual" ? "yr" : "mo"}{" "}
+                  · last seen {item.lastSeen}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_STYLE[item.status]}`}
+                >
+                  {STATUS_LABEL[item.status]}
+                </span>
+                <button
+                  disabled={item.status === "blocked"}
+                  className="rounded-full bg-black px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-30 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+                >
+                  Cancel
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        <p className="mt-6 text-center text-xs text-zinc-500">
+          Read-only scan complete · scanning is not canceling · nothing is
+          canceled without your approval.
+        </p>
+      </main>
+    </div>
+  );
+}
