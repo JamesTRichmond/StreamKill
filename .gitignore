@@ -3,3 +3,12 @@ dist/
 build/
 coverage/
 .env
+
+# StreamKill local/session safety
+.pw-profile/
+*.session
+data/scan-cache/
+*.local.json
+playwright/.auth/
+storage-state.json
+cookies.json
