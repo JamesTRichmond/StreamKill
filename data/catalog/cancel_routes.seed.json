@@ -1,55 +1,115 @@
 {
-  "version": "demo-2026-07-03",
+  "version": "real-2026-07-01",
+  "provenance": "Real cancellation routes from the StreamKill engine catalog. Every route is guarded: automation pauses at the final confirmation for explicit user approval. Field-level automation is allowlisted per route — the agent touches no field not listed in allowed_fields.",
   "routes": [
     {
       "service": "YouTube Premium",
       "route_type": "account_settings",
       "start_url": "https://www.youtube.com/paid_memberships",
       "steps": [
-        "Open paid memberships",
+        "Open Purchases & memberships",
         "Select YouTube Premium membership",
-        "Choose manage membership",
-        "Choose deactivate or cancel",
-        "Pause at final confirmation for user approval"
+        "Choose Manage membership",
+        "Choose Deactivate",
+        "PAUSE at final confirmation for user approval"
       ],
+      "allowed_fields": [],
       "human_gates": ["final_confirmation", "mfa_if_prompted"],
       "automation_level": "guarded"
     },
     {
-      "service": "Dropout",
-      "route_type": "account_billing",
-      "start_url": "https://www.dropout.tv/settings/billing",
+      "service": "Netflix",
+      "route_type": "account_settings",
+      "start_url": "https://www.netflix.com/cancelplan",
       "steps": [
-        "Open account billing settings",
-        "Find active subscription",
-        "Choose cancel membership",
-        "Confirm cancellation only after user approval"
+        "Open Account",
+        "Choose Cancel Membership",
+        "PAUSE at final confirmation for user approval"
       ],
-      "human_gates": ["final_confirmation"],
+      "allowed_fields": [],
+      "human_gates": ["final_confirmation", "mfa_if_prompted"],
       "automation_level": "guarded"
     },
     {
-      "service": "Music Family Plan",
-      "route_type": "provider_settings",
-      "start_url": "provider_account_subscription_settings",
+      "service": "Spotify Premium",
+      "route_type": "account_settings",
+      "start_url": "https://www.spotify.com/account/subscription/",
       "steps": [
-        "Open subscription settings",
-        "Detect family/shared plan warning",
-        "Stop and request user review"
+        "Open Manage your plan",
+        "Choose Change plan",
+        "Choose Cancel Premium",
+        "PAUSE at final confirmation for user approval"
       ],
-      "human_gates": ["shared_plan_review"],
+      "allowed_fields": [],
+      "human_gates": ["final_confirmation", "shared_plan_review", "mfa_if_prompted"],
+      "automation_level": "guarded"
+    },
+    {
+      "service": "Hulu",
+      "route_type": "account_settings",
+      "start_url": "https://secure.hulu.com/account/cancel",
+      "steps": [
+        "Open Account",
+        "Choose Cancel Your Subscription",
+        "PAUSE at final confirmation for user approval"
+      ],
+      "allowed_fields": [],
+      "human_gates": ["final_confirmation", "bundle_review", "mfa_if_prompted"],
+      "automation_level": "guarded"
+    },
+    {
+      "service": "Disney+",
+      "route_type": "account_settings",
+      "start_url": "https://www.disneyplus.com/account/subscription",
+      "steps": [
+        "Open Subscription",
+        "Choose Cancel Subscription",
+        "PAUSE at final confirmation for user approval"
+      ],
+      "allowed_fields": [],
+      "human_gates": ["final_confirmation", "mfa_if_prompted"],
+      "automation_level": "guarded"
+    },
+    {
+      "service": "Audible",
+      "route_type": "provider_settings",
+      "start_url": "https://apps.apple.com/account/subscriptions",
+      "steps": [
+        "Detect billing source (Apple vs direct Amazon)",
+        "If Apple-billed: route to Apple Subscriptions (cannot be fully automated by third party — hand to user)",
+        "If Amazon-billed: audible.com > Account Details > Cancel membership",
+        "PAUSE for user review — this one is Confirm first"
+      ],
+      "allowed_fields": [],
+      "human_gates": ["billing_source_review", "user_review", "final_confirmation"],
       "automation_level": "review_only"
     },
     {
-      "service": "Cloud Storage",
+      "service": "Apple (TV+/Music/iCloud)",
       "route_type": "provider_settings",
-      "start_url": "provider_storage_plan_settings",
+      "start_url": "https://apps.apple.com/account/subscriptions",
       "steps": [
-        "Open storage plan settings",
-        "Detect data-loss or downgrade risk",
-        "Block automatic cancellation"
+        "Open Apple Subscriptions",
+        "Identify which component (TV+/Music/iCloud) the charge maps to",
+        "If iCloud storage: BLOCK automatic cancellation (data-loss risk)",
+        "Otherwise PAUSE for user review"
       ],
-      "human_gates": ["manual_review_required"],
+      "allowed_fields": [],
+      "human_gates": ["component_review", "manual_review_required"],
+      "automation_level": "review_only"
+    },
+    {
+      "service": "iCloud+ Storage",
+      "route_type": "provider_settings",
+      "start_url": "https://apps.apple.com/account/subscriptions",
+      "steps": [
+        "Classify charge as cloud storage",
+        "Detect data-loss / account-downgrade risk",
+        "BLOCK automatic cancellation — do not proceed",
+        "Surface to user with an explicit data-loss warning; require elevated manual review"
+      ],
+      "allowed_fields": [],
+      "human_gates": ["manual_review_required", "data_loss_ack"],
       "automation_level": "blocked"
     }
   ]

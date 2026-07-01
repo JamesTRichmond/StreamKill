@@ -1,72 +1,83 @@
 {
-  "version": "demo-2026-07-03",
+  "version": "real-2026-07-01",
+  "provenance": "Redacted from the real StreamKill test fixtures. Recipient name and any personal identifiers stripped; vendor sender addresses (public) retained. No inbox bodies beyond the receipt lines, no tokens, no account identifiers.",
   "receipts": [
     {
       "receipt_id": "receipt_youtube_premium_redacted",
-      "source": "gmail_search_result",
-      "from": "noreply@youtube.com",
-      "to": "[redacted-email]",
-      "subject": "Your YouTube Premium receipt",
-      "date": "2026-06-18",
-      "snippet": "YouTube Premium monthly membership. Total: $13.99.",
-      "extracted": {
-        "service": "YouTube Premium",
-        "merchant": "Google YouTube",
-        "amount": 13.99,
-        "currency": "USD",
-        "billing_cadence": "monthly"
-      },
+      "source": "fixture",
+      "from": "payments-noreply@google.com",
+      "to": "[redacted-account-owner]",
+      "subject": "Your YouTube Premium membership",
+      "date": "2026-06-09",
+      "snippet": "Hello [redacted-name], this is a receipt for your YouTube Premium membership. YouTube Premium (monthly). Amount: $13.99.",
+      "extracted": { "service": "YouTube Premium", "merchant": "Google", "amount": 13.99, "currency": "USD", "billing_cadence": "monthly" },
       "redaction_status": "redacted"
     },
     {
-      "receipt_id": "receipt_dropout_redacted",
-      "source": "gmail_search_result",
-      "from": "support@dropout.tv",
-      "to": "[redacted-email]",
-      "subject": "Your Dropout subscription receipt",
-      "date": "2026-06-12",
-      "snippet": "Dropout monthly subscription. Total: $6.99.",
-      "extracted": {
-        "service": "Dropout",
-        "merchant": "Dropout",
-        "amount": 6.99,
-        "currency": "USD",
-        "billing_cadence": "monthly"
-      },
+      "receipt_id": "receipt_netflix_redacted",
+      "source": "fixture",
+      "from": "info@account.netflix.com",
+      "to": "[redacted-account-owner]",
+      "subject": "Your receipt from Netflix",
+      "date": "2026-06-14",
+      "snippet": "Hi [redacted-name], thanks for being a member. Plan: Premium (4K Ultra HD). Amount charged: $15.49. Next billing date 2026-07-14.",
+      "extracted": { "service": "Netflix", "merchant": "Netflix", "amount": 15.49, "currency": "USD", "billing_cadence": "monthly" },
       "redaction_status": "redacted"
     },
     {
-      "receipt_id": "receipt_music_family_redacted",
-      "source": "gmail_search_result",
-      "from": "billing@redacted-music-provider.example",
-      "to": "[redacted-email]",
-      "subject": "Your family plan renewal",
-      "date": "2026-06-22",
-      "snippet": "Premium Family Plan renewed. Total: $16.99.",
-      "extracted": {
-        "service": "Redacted Music Family Plan",
-        "merchant": "Redacted Music Provider",
-        "amount": 16.99,
-        "currency": "USD",
-        "billing_cadence": "monthly"
-      },
+      "receipt_id": "receipt_spotify_redacted",
+      "source": "fixture",
+      "from": "no-reply@spotify.com",
+      "to": "[redacted-account-owner]",
+      "subject": "Your Spotify Premium receipt",
+      "date": "2026-06-02",
+      "snippet": "Your Spotify Premium Individual plan has renewed. Premium Individual (monthly). Total: $11.99.",
+      "extracted": { "service": "Spotify Premium", "merchant": "Spotify", "amount": 11.99, "currency": "USD", "billing_cadence": "monthly" },
       "redaction_status": "redacted"
     },
     {
-      "receipt_id": "receipt_cloud_storage_redacted",
-      "source": "gmail_search_result",
-      "from": "billing@redacted-cloud-provider.example",
-      "to": "[redacted-email]",
-      "subject": "Your cloud storage plan receipt",
+      "receipt_id": "receipt_hulu_redacted",
+      "source": "fixture",
+      "from": "hulupayments@hulumail.com",
+      "to": "[redacted-account-owner]",
+      "subject": "Your Hulu receipt",
       "date": "2026-06-05",
-      "snippet": "Cloud storage monthly plan. Total: $2.99.",
-      "extracted": {
-        "service": "Redacted Cloud Storage",
-        "merchant": "Redacted Cloud Provider",
-        "amount": 2.99,
-        "currency": "USD",
-        "billing_cadence": "monthly"
-      },
+      "snippet": "Thanks for subscribing to Hulu. Hulu (With Ads) - monthly. You were charged $9.99.",
+      "extracted": { "service": "Hulu", "merchant": "Hulu", "amount": 9.99, "currency": "USD", "billing_cadence": "monthly" },
+      "redaction_status": "redacted"
+    },
+    {
+      "receipt_id": "receipt_disney_redacted",
+      "source": "fixture",
+      "from": "disneyplus@mail.disneyplus.com",
+      "to": "[redacted-account-owner]",
+      "subject": "Your Disney+ annual subscription",
+      "date": "2026-06-01",
+      "snippet": "Hi [redacted-name], your Disney+ subscription has renewed for another year. Disney+ Premium (yearly). Total charged: $159.99.",
+      "extracted": { "service": "Disney+", "merchant": "Disney+", "amount": 159.99, "currency": "USD", "billing_cadence": "yearly" },
+      "redaction_status": "redacted"
+    },
+    {
+      "receipt_id": "receipt_audible_redacted",
+      "source": "fixture",
+      "from": "no_reply@email.apple.com",
+      "to": "[redacted-account-owner]",
+      "subject": "Your receipt from Apple",
+      "date": "2026-06-22",
+      "snippet": "Hi [redacted-name], your receipt for your subscription. Audible Premium Plus (Monthly). Amount: $15.99. Auto-renews 2026-07-22.",
+      "extracted": { "service": "Audible", "merchant": "Apple (Audible)", "amount": 15.99, "currency": "USD", "billing_cadence": "monthly" },
+      "redaction_status": "redacted"
+    },
+    {
+      "receipt_id": "receipt_amazon_order_negative_control",
+      "source": "fixture",
+      "from": "ship-confirm@amazon.com",
+      "to": "[redacted-account-owner]",
+      "subject": "Your Amazon.com order has shipped",
+      "date": "2026-06-18",
+      "snippet": "Your order has shipped. Order #[redacted-order]. 1x paperback. Order total: $42.31. This was a one-time purchase, not a subscription.",
+      "extracted": { "service": null, "merchant": "Amazon", "amount": 42.31, "currency": "USD", "billing_cadence": "one_time" },
+      "is_subscription": false,
       "redaction_status": "redacted"
     }
   ]

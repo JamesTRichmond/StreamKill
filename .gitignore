@@ -3,12 +3,18 @@ dist/
 build/
 coverage/
 .env
+.env.*.local
 
-# StreamKill local/session safety
+# ── StreamKill security hardening (never commit auth/session/scan state) ──
 .pw-profile/
-*.session
-data/scan-cache/
-*.local.json
 playwright/.auth/
 storage-state.json
 cookies.json
+*.session
+*.local.json
+data/scan-cache/
+raw_gmail/
+inbox_export/
+*.token
+*.secret
+client_secret*.json

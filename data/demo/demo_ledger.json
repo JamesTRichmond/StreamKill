@@ -1,14 +1,15 @@
 {
   "demo_user": "redacted-demo-user",
-  "generated_at": "2026-07-01T14:30:00Z",
+  "generated_at": "2026-07-01T15:00:00Z",
   "currency": "USD",
+  "data_provenance": "Verified StreamKill `scan fixtures` output (real engine, run 2026-07-01). The six streaming/audio rows are the real verified bleed ($80.78/mo → $969.36/yr). One illustrative iCloud+ Storage row (source: illustrative_policy_example) demonstrates the Do-not-auto-kill safety tier; its $119.88 is shown under blocked_by_policy and is NOT counted in the verified $969.36 detected bleed.",
   "summary": {
-    "detected_monthly_bleed": 40.96,
-    "detected_annual_bleed": 491.52,
-    "safe_to_kill_annual": 251.76,
-    "requires_review_annual": 203.88,
-    "blocked_by_policy_annual": 35.88,
-    "approved_for_cancellation_annual": 251.76
+    "detected_monthly_bleed": 80.78,
+    "detected_annual_bleed": 969.36,
+    "safe_to_kill_annual": 777.48,
+    "requires_review_annual": 191.88,
+    "blocked_by_policy_annual": 119.88,
+    "approved_for_cancellation_annual": 777.48
   },
   "subscriptions": [
     {
@@ -18,34 +19,83 @@
       "amount_annual": 167.88,
       "confidence": 0.98,
       "safety_label": "Safe kill",
-      "status": "verified_canceled_for_demo"
+      "status": "verified_canceled_2026-06-23",
+      "cancel_url": "https://www.youtube.com/paid_memberships",
+      "source": "verified_fixture"
     },
     {
-      "id": "sub_dropout",
-      "service": "Dropout",
-      "amount_monthly": 6.99,
-      "amount_annual": 83.88,
-      "confidence": 0.96,
+      "id": "sub_netflix",
+      "service": "Netflix",
+      "amount_monthly": 15.49,
+      "amount_annual": 185.88,
+      "confidence": 0.90,
       "safety_label": "Safe kill",
-      "status": "verified_canceled_for_demo"
+      "status": "ready_for_approval (unverified — possibly dormant)",
+      "cancel_url": "https://www.netflix.com/cancelplan",
+      "source": "verified_fixture"
     },
     {
-      "id": "sub_music_family",
-      "service": "Redacted Music Family Plan",
-      "amount_monthly": 16.99,
-      "amount_annual": 203.88,
-      "confidence": 0.82,
+      "id": "sub_spotify",
+      "service": "Spotify Premium",
+      "amount_monthly": 11.99,
+      "amount_annual": 143.88,
+      "confidence": 0.97,
+      "safety_label": "Safe kill",
+      "status": "ready_for_approval",
+      "cancel_url": "https://www.spotify.com/account/subscription/",
+      "source": "verified_fixture"
+    },
+    {
+      "id": "sub_hulu",
+      "service": "Hulu",
+      "amount_monthly": 9.99,
+      "amount_annual": 119.88,
+      "confidence": 0.97,
+      "safety_label": "Safe kill",
+      "status": "ready_for_approval",
+      "cancel_url": "https://secure.hulu.com/account/cancel",
+      "source": "verified_fixture"
+    },
+    {
+      "id": "sub_disney_plus",
+      "service": "Disney+",
+      "amount_monthly": 13.33,
+      "amount_annual": 159.96,
+      "confidence": 0.95,
+      "safety_label": "Safe kill",
+      "status": "ready_for_approval (billed yearly $159.99)",
+      "cancel_url": "https://www.disneyplus.com/account/subscription",
+      "source": "verified_fixture"
+    },
+    {
+      "id": "sub_audible",
+      "service": "Audible",
+      "amount_monthly": 15.99,
+      "amount_annual": 191.88,
+      "confidence": 0.98,
       "safety_label": "Confirm first",
-      "status": "needs_user_review"
+      "status": "kept_by_user (in active use; renews 2026-07-11, Apple-billed)",
+      "cancel_url": "https://apps.apple.com/account/subscriptions",
+      "source": "verified_fixture"
     },
     {
-      "id": "sub_cloud_storage",
-      "service": "Redacted Cloud Storage",
-      "amount_monthly": 2.99,
-      "amount_annual": 35.88,
-      "confidence": 0.91,
+      "id": "sub_icloud_2tb_illustrative",
+      "service": "iCloud+ 2TB Storage",
+      "amount_monthly": 9.99,
+      "amount_annual": 119.88,
+      "confidence": 0.90,
       "safety_label": "Do not auto-kill",
-      "status": "blocked_by_safety_policy"
+      "status": "blocked_by_safety_policy (data-loss risk — protected)",
+      "cancel_url": "https://apps.apple.com/account/subscriptions",
+      "source": "illustrative_policy_example"
+    }
+  ],
+  "skipped": [
+    {
+      "item": "Amazon order (one-time)",
+      "reason": "one-time purchase, not a subscription — false-positive guard working",
+      "amount": 42.31,
+      "source": "verified_fixture (negative control)"
     }
   ]
 }
