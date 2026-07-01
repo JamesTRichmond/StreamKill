@@ -31,7 +31,10 @@ function annualize(item: LeakItem): number {
   return item.cadence === "annual" ? item.amount : item.amount * 12;
 }
 
-export async function buildLedger(accessToken?: string): Promise<Ledger> {
+// `mailbox` is the bound scan target resolved from the authenticated session
+// (see resolveScanTarget in lib/gmail.ts) — never a value the user typed. The
+// engine is told exactly which single inbox it may read, and no other.
+export async function buildLedger(mailbox: string, accessToken?: string): Promise<Ledger> {
   // TODO(phase-3): replace with a call to the engine service, e.g.
   //   const res = await fetch(`${process.env.ENGINE_URL}/ledger`, {
   //     method: "POST",
@@ -40,6 +43,7 @@ export async function buildLedger(accessToken?: string): Promise<Ledger> {
   //   });
   //   return res.json();
   void accessToken;
+  void mailbox;
 
   const items: LeakItem[] = [
     { service: "YouTube Premium", amount: 13.99, cadence: "monthly", lastSeen: "2026-06-28", confidence: "high", status: "safe_to_cancel", cancelUrl: "https://www.youtube.com/paid_memberships" },
