@@ -1,0 +1,37 @@
+{
+  "version": "demo-2026-07-03",
+  "services": [
+    {
+      "service": "YouTube Premium",
+      "merchant_patterns": ["Google YouTube", "YouTube Premium", "Google LLC"],
+      "category": "streaming",
+      "default_safety_label": "Safe kill",
+      "cancel_route": "Google account subscriptions page",
+      "risk_notes": "Consumer entertainment subscription."
+    },
+    {
+      "service": "Dropout",
+      "merchant_patterns": ["Dropout", "CH Media", "VHX Dropout"],
+      "category": "streaming",
+      "default_safety_label": "Safe kill",
+      "cancel_route": "Dropout account billing page",
+      "risk_notes": "Consumer streaming subscription."
+    },
+    {
+      "service": "Music Family Plan",
+      "merchant_patterns": ["Music Family", "Family Plan", "Premium Family"],
+      "category": "music",
+      "default_safety_label": "Confirm first",
+      "cancel_route": "Provider account subscription settings",
+      "risk_notes": "May be shared by household members."
+    },
+    {
+      "service": "Cloud Storage",
+      "merchant_patterns": ["Cloud Storage", "iCloud", "Google One", "Dropbox"],
+      "category": "storage",
+      "default_safety_label": "Do not auto-kill",
+      "cancel_route": "Provider storage plan settings",
+      "risk_notes": "Cancellation may cause downgrade, access loss, or data-loss risk."
+    }
+  ]
+}
