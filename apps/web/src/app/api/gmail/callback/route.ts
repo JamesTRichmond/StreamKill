@@ -18,9 +18,7 @@ export async function GET(request: NextRequest) {
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
   const cookieState = request.cookies.get("sk_gmail_state")?.value;
-  // Must match the redirect_uri used in /connect exactly (same base).
-  const base = process.env.AUTH_URL ?? url.origin;
-  const redirectUri = `${base}/api/gmail/callback`;
+  const redirectUri = `${url.origin}/api/gmail/callback`;
 
   const clearState = (res: NextResponse) => {
     res.cookies.delete("sk_gmail_state");
