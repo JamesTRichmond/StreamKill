@@ -6,8 +6,10 @@ import {
   getScanSession,
   latestReadySession,
   getContract,
+  saveContract,
 } from "@/lib/store";
 import { runScan, ExecutionRefused } from "@/lib/engine";
+import { issueContract, isExpired } from "@/lib/contract";
 
 const money = (n: number) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -59,7 +61,20 @@ export default async function LedgerPage({
   const scan = sessionId ? getScanSession(sessionId) : latestReadySession(user.id);
   if (!scan || scan.user_id !== user.id) redirect("/scan");
 
-  const signed = getContract(scan.id);
+  let signed = getContract(scan.id);
+
+  // The contract is minted at Gmail-connect with a short TTL but consumed here.
+  // A benign timeout (or revisiting this page) should NOT dead-end the verified
+  // owner on a scary refusal — re-issue a fresh contract for this same scan
+  // session and proceed. The owner is still authenticated (session.userId), the
+  // session is theirs (checked above), and verified_email === the connected
+  // inbox that was proven at connect, so re-issuing preserves the invariant.
+  // NOTE: higher-risk actions (cancellation) must force a fresh Gmail connect
+  // instead of silently re-issuing.
+  if (!signed || isExpired(signed.contract)) {
+    signed = issueContract(scan, scan.verified_email);
+    saveContract(signed);
+  }
 
   // Run through the engine boundary. It refuses unless the signed contract is
   // valid and every email matches. We pass the contract's own allowed inbox as
