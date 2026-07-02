@@ -193,23 +193,34 @@ export default async function LedgerPage({
                 >
                   {STATUS_LABEL[item.status]}
                 </span>
-                {/* Cancellation is disabled by contract — stub only, needs
-                    per-item owner approval. Kept non-functional for now. */}
-                <button
-                  disabled
-                  title="Cancellation is not enabled yet — requires your per-item approval."
-                  className="cursor-not-allowed rounded-full bg-black px-4 py-2 text-sm font-medium text-white opacity-30 dark:bg-white dark:text-black"
-                >
-                  Cancel
-                </button>
+                {/* Per-item, approval-gated. Routes to a confirmation page that
+                    opens the service's own official cancel page. StreamKill
+                    never cancels automatically. */}
+                {item.status === "blocked" ? (
+                  <button
+                    disabled
+                    title="Protected — cancelling this isn't recommended."
+                    className="cursor-not-allowed rounded-full bg-black px-4 py-2 text-sm font-medium text-white opacity-30 dark:bg-white dark:text-black"
+                  >
+                    Cancel
+                  </button>
+                ) : (
+                  <a
+                    href={`/ledger/cancel?session=${scan.id}&service=${encodeURIComponent(item.service)}`}
+                    className="rounded-full bg-black px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+                  >
+                    Cancel
+                  </a>
+                )}
               </div>
             </li>
           ))}
         </ul>
 
         <p className="mt-6 text-center text-xs text-zinc-500">
-          Read-only scan · scanning is not canceling · cancellation stays off
-          until you approve each item.
+          Read-only scan · you approve each cancellation individually · StreamKill
+          sends you to each service&apos;s official cancel page — it never cancels
+          behind your back.
         </p>
       </main>
     </div>
