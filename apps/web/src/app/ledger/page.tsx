@@ -114,7 +114,15 @@ export default async function LedgerPage({
               Your subscriptions
             </h1>
           </div>
-          <SignOutButton />
+          <div className="flex items-center gap-3">
+            <a
+              href="/disconnect"
+              className="text-sm font-medium text-red-600 underline-offset-4 hover:underline"
+            >
+              Disconnect
+            </a>
+            <SignOutButton />
+          </div>
         </div>
 
         {/* Bound scan target — the verified, contract-locked inbox. */}

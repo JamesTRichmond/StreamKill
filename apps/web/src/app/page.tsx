@@ -1,13 +1,24 @@
 import { auth, signIn } from "@/auth";
 import { redirect } from "next/navigation";
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ disconnected?: string }>;
+}) {
   const session = await auth();
   if (session?.verifiedEmail) redirect("/scan");
+  const { disconnected } = await searchParams;
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 px-6 py-24 font-sans dark:bg-black">
       <main className="w-full max-w-xl">
+        {disconnected ? (
+          <div className="mb-6 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300">
+            You&apos;ve been disconnected. Everything StreamKill held for your
+            account was deleted.
+          </div>
+        ) : null}
         <p className="text-sm font-medium uppercase tracking-widest text-emerald-600">
           StreamKill
         </p>

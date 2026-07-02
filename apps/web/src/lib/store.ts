@@ -140,3 +140,16 @@ export function saveContract(signed: SignedContract): void {
 export function getContract(scanSessionId: string): SignedContract | undefined {
   return load().contracts[scanSessionId];
 }
+
+// Full disconnect: erase everything we hold for this user — the user record,
+// all their scan_sessions, and all their contracts. (We never store tokens, so
+// there is nothing else to purge.) Idempotent.
+export function deleteUserData(userId: string): { sessions: number } {
+  const db = load();
+  const theirSessions = db.scan_sessions.filter((s) => s.user_id === userId);
+  for (const s of theirSessions) delete db.contracts[s.id];
+  db.scan_sessions = db.scan_sessions.filter((s) => s.user_id !== userId);
+  db.users = db.users.filter((u) => u.id !== userId);
+  save(db);
+  return { sessions: theirSessions.length };
+}

@@ -10,8 +10,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  const origin = new URL(request.url).origin;
-  const redirectUri = `${origin}/api/gmail/callback`;
+  // Prefer the configured public URL (AUTH_URL) so redirect_uri is stable
+  // behind a proxy/tunnel; fall back to the request origin locally.
+  const base = process.env.AUTH_URL ?? new URL(request.url).origin;
+  const redirectUri = `${base}/api/gmail/callback`;
   const state = crypto.randomUUID();
 
   const res = NextResponse.redirect(buildGmailAuthUrl({ state, redirectUri }));

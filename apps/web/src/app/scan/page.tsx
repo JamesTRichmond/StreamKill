@@ -58,7 +58,7 @@ export default async function ScanPage({
           Connect Gmail (read-only)
         </a>
 
-        <div className="mt-8">
+        <div className="mt-8 flex items-center gap-4">
           <form
             action={async () => {
               "use server";
@@ -72,6 +72,12 @@ export default async function ScanPage({
               Not you? Sign out
             </button>
           </form>
+          <a
+            href="/disconnect"
+            className="text-sm font-medium text-red-600 underline-offset-4 hover:underline"
+          >
+            Disconnect account
+          </a>
         </div>
       </main>
     </div>
