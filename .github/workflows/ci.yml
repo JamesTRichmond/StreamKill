@@ -17,3 +17,16 @@ jobs:
           test -f .gitignore
           test -f .editorconfig
           test -f LICENSE
+
+  node-ci:
+    name: Node checks (if package.json exists)
+    if: ${{ hashFiles('**/package.json') != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm ci
+      - run: npm run lint --if-present
+      - run: npm test --if-present
