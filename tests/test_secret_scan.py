@@ -5,6 +5,7 @@ Two jobs:
   2. Prove each rule actually fires on its bad case (guards the guard).
 """
 
+import subprocess
 from pathlib import Path
 
 from packages.security.secret_scan import (
@@ -86,3 +87,22 @@ def test_redacted_recipient_placeholder_is_allowed():
 def test_flags_structured_secret_in_data():
     obj = {"access_token": "ya29.a0AfH6SMBx1y2z3w4v5u6t7s8r9q0p1"}
     assert "structured_secret" in _rules(scan_data_structure("data/demo/x.json", obj))
+
+
+# ----- sensitive-path rule targets artifacts, not source code -----
+
+def test_sensitive_path_rule_distinguishes_artifacts_from_source(tmp_path):
+    # Regression: the scanner's own source files (e.g. secret_scan.py) contain
+    # the blocked word "secret" in their name and must NOT be flagged, while a
+    # data/credential artifact with a blocked name MUST be.
+    subprocess.run(["git", "-C", str(tmp_path), "init", "-q"], check=True)
+    (tmp_path / "helper_secret_scan.py").write_text("# scans for secrets\n")
+    (tmp_path / "cookies.json").write_text("{}")
+    (tmp_path / "client_secret_prod.json").write_text("{}")
+    subprocess.run(["git", "-C", str(tmp_path), "add", "-A"], check=True)
+
+    findings = scan_repo(str(tmp_path))
+    flagged = {f.path for f in findings if f.rule == "sensitive_path"}
+    assert "helper_secret_scan.py" not in flagged
+    assert "cookies.json" in flagged
+    assert "client_secret_prod.json" in flagged

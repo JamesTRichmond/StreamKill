@@ -74,6 +74,15 @@ TEXT_SUFFIXES = {
     ".env", ".example", ".js", ".ts", ".sh", ".html", ".csv", "",
 }
 
+# Source-code extensions. The sensitive-path rule targets committed *artifacts*
+# (``.env``, ``cookies.json``, ``*.session`` …), which are never source; a
+# source file may legitimately reference "secret"/"token"/"cookie" in its name
+# (e.g. this scanner's own ``secret_scan.py``). Source is still content-scanned.
+SOURCE_CODE_SUFFIXES = {
+    ".py", ".md", ".yml", ".yaml", ".toml", ".cfg", ".ini",
+    ".js", ".ts", ".sh", ".html", ".css",
+}
+
 # Consumer mailbox providers — a real account owner leaking into scan data.
 # Vendor senders use their own corporate domains, so this stays low-noise.
 CONSUMER_EMAIL_DOMAINS = {
@@ -181,14 +190,21 @@ def scan_repo(root: str = ".") -> List[Finding]:
         abs_path = root_path / rel_path
 
         norm = rel_path.replace("\\", "/")
+        suffix = abs_path.suffix.lower()
 
-        # Tier 0: sensitive path/filename must never be committed.
-        if norm not in PATH_ALLOWLIST and not repo_safe_path(rel_path):
+        # Tier 0: sensitive path/filename must never be committed. Applies to
+        # artifacts only — source code may legitimately carry a blocked word
+        # (e.g. "secret") in its name, so exempt source extensions here.
+        if (
+            norm not in PATH_ALLOWLIST
+            and suffix not in SOURCE_CODE_SUFFIXES
+            and not repo_safe_path(rel_path)
+        ):
             findings.append(Finding(rel_path, "sensitive_path", "path matches a blocked-artifact fragment"))
 
         if not abs_path.is_file():
             continue
-        if abs_path.suffix.lower() not in TEXT_SUFFIXES:
+        if suffix not in TEXT_SUFFIXES:
             continue
         if norm.startswith(CONTENT_SCAN_EXCLUDE_PREFIXES):
             continue
@@ -201,7 +217,7 @@ def scan_repo(root: str = ".") -> List[Finding]:
         findings.extend(scan_high_confidence_text(rel_path, text))
 
         # Tier 2: strict structured checks for data artifacts.
-        if norm.startswith(DATA_PREFIX) and abs_path.suffix.lower() == ".json":
+        if norm.startswith(DATA_PREFIX) and suffix == ".json":
             try:
                 obj = json.loads(text)
             except json.JSONDecodeError as exc:
