@@ -7,7 +7,7 @@ on:
 
 jobs:
   repo-sanity:
-    name: Repository sanity checks
+    name: repo-sanity
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,6 +17,7 @@ jobs:
           test -f .gitignore
           test -f .editorconfig
           test -f LICENSE
+<<<<<<< HEAD
 
   node-ci:
     name: Node checks (if package.json exists)
@@ -50,3 +51,5 @@ jobs:
         if: steps.pkg.outputs.exists == 'true' && steps.pm.outputs.cache != ''
       - run: npm test --if-present
         if: steps.pkg.outputs.exists == 'true' && steps.pm.outputs.cache != ''
+=======
+>>>>>>> origin/main

@@ -1,0 +1,86 @@
+{
+  "version": "real-2026-07-01",
+  "provenance": "Mirrors the real StreamKill engine catalog (services.json, 9 services). Safety labels are catalog defaults; per-user instance labels live in the ledger.",
+  "services": [
+    {
+      "service": "YouTube Premium",
+      "merchant_patterns": ["YouTube Premium", "Google *YouTube", "payments-noreply@google.com", "Google LLC"],
+      "category": "streaming",
+      "default_safety_label": "Safe kill",
+      "cancel_route": "https://www.youtube.com/paid_memberships",
+      "risk_notes": "Consumer entertainment subscription. Safe to cancel."
+    },
+    {
+      "service": "Netflix",
+      "merchant_patterns": ["Netflix", "info@account.netflix.com"],
+      "category": "streaming",
+      "default_safety_label": "Safe kill",
+      "cancel_route": "https://www.netflix.com/cancelplan",
+      "risk_notes": "Consumer streaming. Stays active until end of billing period."
+    },
+    {
+      "service": "Spotify Premium",
+      "merchant_patterns": ["Spotify", "no-reply@spotify.com", "Premium Individual"],
+      "category": "music",
+      "default_safety_label": "Safe kill",
+      "cancel_route": "https://www.spotify.com/account/subscription/",
+      "risk_notes": "Consumer music. Watch for shared/family plans (bump to Confirm first)."
+    },
+    {
+      "service": "Hulu",
+      "merchant_patterns": ["Hulu", "hulupayments@hulumail.com"],
+      "category": "streaming",
+      "default_safety_label": "Safe kill",
+      "cancel_route": "https://secure.hulu.com/account/cancel",
+      "risk_notes": "Consumer streaming. May be Disney-bundled (check before cancel)."
+    },
+    {
+      "service": "Disney+",
+      "merchant_patterns": ["Disney+", "disneyplus@mail.disneyplus.com"],
+      "category": "streaming",
+      "default_safety_label": "Safe kill",
+      "cancel_route": "https://www.disneyplus.com/account/subscription",
+      "risk_notes": "Consumer streaming. Often billed yearly — annualize cadence."
+    },
+    {
+      "service": "Amazon Prime",
+      "merchant_patterns": ["Amazon Prime", "Prime Video", "amazon.com"],
+      "category": "streaming",
+      "default_safety_label": "Confirm first",
+      "cancel_route": "https://www.amazon.com/gp/primecentral",
+      "risk_notes": "Bundle: Prime includes shipping and other benefits — confirm before cancel."
+    },
+    {
+      "service": "Max (HBO)",
+      "merchant_patterns": ["Max", "HBO Max", "max.com"],
+      "category": "streaming",
+      "default_safety_label": "Safe kill",
+      "cancel_route": "https://www.max.com/account",
+      "risk_notes": "Consumer streaming. Safe to cancel."
+    },
+    {
+      "service": "Apple (TV+/Music/iCloud)",
+      "merchant_patterns": ["Apple", "no_reply@email.apple.com", "apple.com/bill", "iTunes"],
+      "category": "bundle",
+      "default_safety_label": "Confirm first",
+      "cancel_route": "https://apps.apple.com/account/subscriptions",
+      "risk_notes": "Apple bill can bundle iCloud storage, Apple Music, and TV+. iCloud storage carries data-loss risk on downgrade — never auto-kill the storage component."
+    },
+    {
+      "service": "Audible",
+      "merchant_patterns": ["Audible", "Audible Premium Plus", "Apple (Audible via Apple billing)"],
+      "category": "audio",
+      "default_safety_label": "Safe kill",
+      "cancel_route": "https://apps.apple.com/account/subscriptions",
+      "risk_notes": "Consumer audio. Often Apple-billed — cancel via Apple subscriptions, not audible.com, when billed through Apple."
+    },
+    {
+      "service": "iCloud+ Storage",
+      "merchant_patterns": ["iCloud+", "iCloud Storage", "Apple iCloud", "no_reply@email.apple.com"],
+      "category": "storage",
+      "default_safety_label": "Do not auto-kill",
+      "cancel_route": "https://apps.apple.com/account/subscriptions",
+      "risk_notes": "PROTECTED. Cancelling storage can trigger downgrade and permanent loss of photos/backups above the free tier. Never auto-cancel — requires elevated manual review."
+    }
+  ]
+}
