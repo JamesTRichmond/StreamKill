@@ -115,6 +115,16 @@ Do not commit local credentials, browser profiles, OAuth secrets, cookies, or ra
 - scripts/ — executable demo and validation scripts
 - tests/ — pytest suite covering the trust rules and ledger math
 
+## Releases
+
+This repo uses [Release Please](https://github.com/googleapis/release-please) to automate the changelog, tags, and GitHub Releases (no npm publishing). Use Conventional Commits:
+
+- `feat: ...` → minor
+- `fix: ...` → patch
+- `feat!: ...` or `BREAKING CHANGE:` → major
+
+Release Please opens/updates a release PR automatically; merging that PR creates the GitHub Release and tag.
+
 ## Product Direction
 
 The final product experience is the StreamKill Kill Room:
