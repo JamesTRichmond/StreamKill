@@ -201,15 +201,25 @@ and sends it as `token_ref`. Lifecycle:
   request (§1). If it is missing/expired on a later revisit, `token_ref` is
   `null` and the engine falls back (fixture, or ask the user to reconnect)
   rather than failing.
-- **Redeem (PROPOSED)** — the engine exchanges the handle for the token exactly
-  once, then it is invalidated. Because the engine is a separate service and the
-  web app may be multi-instance, production requires:
-  1. a **shared TTL store** (e.g. Redis) behind the vault — the in-process Map is
-     dev-only; and
-  2. an **authenticated redeem endpoint** on the web app, e.g.
-     `POST /api/engine/token/redeem` with body `{ "token_ref": "skref_..." }` and
-     header `X-SK-Signature: HMAC_SHA256(CONTRACT_SIGNING_SECRET, token_ref)`,
-     returning `{ "access_token": "..." }` once (404/410 if unknown/expired/spent).
+- **Redeem** — the engine exchanges the handle for the token exactly once, then
+  it is invalidated. The web endpoint is **implemented**:
+
+  ```
+  POST /api/engine/token/redeem
+  Content-Type: application/json
+  X-SK-Signature: <hex HMAC_SHA256(CONTRACT_SIGNING_SECRET, token_ref)>
+
+  { "token_ref": "skref_..." }
+  ```
+
+  Responses: `200 { "access_token": "..." }` once · `401` bad/missing signature ·
+  `410 { "error": "token_ref_unavailable" }` unknown/expired/spent · `400`
+  malformed. A failed-auth attempt does NOT consume the handle. The engine must
+  send the HMAC; only a caller holding `CONTRACT_SIGNING_SECRET` can redeem.
+
+  Production still requires a **shared TTL store** (e.g. Redis) behind the vault
+  — the in-process Map (`lib/token-vault.ts`) is dev-only, so redeem only works
+  when the web app is a single instance until that swap lands.
 
 **Open decisions for the engine + product owners:**
 - Stale-revisit scans: fall back to fixture, or force a fresh Gmail connect? (The
