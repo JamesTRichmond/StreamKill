@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://streamkill.ai/contract/execution-contract.schema.json",
+  "title": "ExecutionContract",
+  "description": "The only thing the engine will act on. Signed by the web app (issuer); independently re-verified by the engine (verifier). See ENGINE_CONTRACT.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "user_id",
+    "scan_session_id",
+    "verified_email",
+    "allowed_inbox_email",
+    "allowed_actions",
+    "expires_at"
+  ],
+  "properties": {
+    "user_id": { "type": "string", "minLength": 1 },
+    "scan_session_id": { "type": "string", "minLength": 1 },
+    "verified_email": { "type": "string", "format": "email" },
+    "allowed_inbox_email": { "type": "string", "format": "email" },
+    "allowed_actions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scan_receipts", "build_ledger", "cancel_subscription"],
+      "properties": {
+        "scan_receipts": { "type": "boolean" },
+        "build_ledger": { "type": "boolean" },
+        "cancel_subscription": {
+          "type": "boolean",
+          "description": "Always false today. The engine 403s (cancel_not_allowed) if ever true."
+        }
+      }
+    },
+    "expires_at": { "type": "string", "format": "date-time" }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://streamkill.ai/contract/ledger.schema.json",
+  "title": "Ledger",
+  "description": "Success (200) response from the engine — the leak ledger the web UI renders. See ENGINE_CONTRACT.md §4.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["items", "monthlyTotal", "annualTotal"],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["service", "amount", "cadence", "lastSeen", "confidence", "status"],
+        "properties": {
+          "service": { "type": "string", "minLength": 1 },
+          "amount": { "type": "number", "minimum": 0 },
+          "cadence": { "enum": ["monthly", "annual"] },
+          "lastSeen": { "type": "string", "format": "date" },
+          "confidence": { "enum": ["high", "medium", "low"] },
+          "status": { "enum": ["safe_to_cancel", "review", "blocked"] },
+          "cancelUrl": { "type": "string" }
+        }
+      }
+    },
+    "monthlyTotal": { "type": "number", "minimum": 0 },
+    "annualTotal": { "type": "number", "minimum": 0 }
+  }
+}

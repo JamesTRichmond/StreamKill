@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://streamkill.ai/contract/scan-request.schema.json",
+  "title": "ScanRequest",
+  "description": "Body the web app POSTs to ENGINE_URL. See ENGINE_CONTRACT.md §1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["execution_contract", "signature", "connected_inbox", "token_ref"],
+  "properties": {
+    "execution_contract": {
+      "$ref": "https://streamkill.ai/contract/execution-contract.schema.json"
+    },
+    "signature": {
+      "type": "string",
+      "description": "hex HMAC-SHA256 of the canonical contract (64 lowercase hex chars).",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "connected_inbox": {
+      "type": "string",
+      "format": "email",
+      "description": "The inbox actually being acted on; sent explicitly so the engine compares, not infers."
+    },
+    "token_ref": {
+      "type": ["string", "null"],
+      "description": "Handle for a short-lived read-only Gmail token. null for the fixture milestone. Never a raw password or long-lived token."
+    }
+  }
+}
