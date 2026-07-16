@@ -9,6 +9,32 @@ Owner of issuer side: Central Command (Nazarick). Owner of verifier side: Ainz.
 
 ---
 
+## 0. Machine-readable schemas & local mock
+
+The prose below is authoritative; these make it executable and testable:
+
+- **JSON Schemas** (`apps/web/contract/`): `execution-contract.schema.json`,
+  `scan-request.schema.json`, `ledger.schema.json`. The web app's issued
+  contracts, the exact wire request, and the engine's ledger response are all
+  validated against these in CI (`apps/web/tests/engine-conformance.test.ts`).
+  The Python engine should validate against the same files.
+- **Mock engine** (`apps/web/mock-engine/`): an INDEPENDENT verifier + `/scan`
+  server implementing §2–§5 (it re-implements canonicalization + HMAC rather
+  than sharing code, exactly as the real engine must). Run it locally and point
+  the app at it:
+
+  ```
+  cd apps/web
+  CONTRACT_SIGNING_SECRET=dev-secret npm run mock-engine          # :8787
+  # then, in another shell (same secret on both sides):
+  CONTRACT_SIGNING_SECRET=dev-secret ENGINE_URL=http://localhost:8787/scan npm run dev
+  ```
+
+  The real Python engine is a drop-in replacement for this mock: same request
+  schema in, same 403 codes / ledger schema out.
+
+---
+
 ## 1. Endpoint
 
 `ENGINE_URL` is the **full scan endpoint** (not a base). The web client POSTs to
