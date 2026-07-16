@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="assets/agentic3_logo.png" width="300" alt="Agentic³" />
+</div>
+
 # StreamKill.ai
 
 StreamKill is a consent-based subscription leak detector and guarded cancellation system.
@@ -118,3 +122,6 @@ The final product experience is the StreamKill Kill Room:
 Landing page → Trust gate → Scan approval → Leak ledger → Approval queue → Guarded browser cancellation → Proof receipt.
 
 The public repo is the proof artifact. The user-facing product should hide technical installation and collapse time-to-value.
+
+---
+<div align="center"><sub>An <b>Agentic³</b> project · Closing Multi-Dimensional Agentic Loops</sub></div>
