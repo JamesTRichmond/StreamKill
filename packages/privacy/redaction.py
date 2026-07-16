@@ -21,6 +21,10 @@ CARD_RE = re.compile(r"\b(?:\d[ -]*?){13,16}\b")
 TOKEN_RE = re.compile(r"(?i)(token|secret|api[_-]?key|authorization|bearer|cookie|password|client_secret)\s*[:=]\s*\S+")
 # secret-ish blobs: long base64/hex runs that look like keys/tokens
 SECRET_BLOB_RE = re.compile(r"\b[A-Za-z0-9_\-]{32,}\b")
+# a real token/key is a long *contiguous* run; snake_case/kebab ids break into
+# short dictionary-ish segments and are not secrets.
+_CONTIGUOUS_ALNUM_RE = re.compile(r"[A-Za-z0-9]+")
+SECRET_MIN_CONTIGUOUS_RUN = 24
 SECRET_KEYNAMES = {"password", "passwd", "token", "access_token", "refresh_token",
                    "secret", "client_secret", "api_key", "apikey", "authorization",
                    "cookie", "cookies", "session", "storage_state", "mfa", "otp"}
@@ -75,8 +79,23 @@ def assert_no_secrets(obj: Any, _path: str = "$") -> None:
     elif isinstance(obj, str):
         if TOKEN_RE.search(obj) or CARD_RE.search(obj):
             raise SecretLeakError(f"Secret/card pattern in string at {_path}.")
-        if SECRET_BLOB_RE.search(obj) and not obj.startswith(("http", "sha256", "[redacted")):
-            raise SecretLeakError(f"High-entropy blob at {_path} — possible token/key.")
+        if not obj.startswith(("http", "sha256", "[redacted")):
+            for blob in SECRET_BLOB_RE.findall(obj):
+                if _looks_like_secret_blob(blob):
+                    raise SecretLeakError(f"High-entropy blob at {_path} — possible token/key.")
+
+
+def _looks_like_secret_blob(blob: str) -> bool:
+    """True if a long string looks like a real token/key rather than an id.
+
+    Tokens, API keys, and base64/hex secrets carry a long *contiguous* run of
+    letters/digits. Snake_case and kebab-case identifiers (e.g.
+    ``receipt_youtube_premium_redacted``) break into short word-like segments
+    at ``_``/``-`` and are not secrets — flagging them would block writing
+    perfectly-redacted artifacts.
+    """
+    longest_run = max((len(m) for m in _CONTIGUOUS_ALNUM_RE.findall(blob)), default=0)
+    return longest_run >= SECRET_MIN_CONTIGUOUS_RUN
 
 
 def _looks_populated(v: Any) -> bool:

@@ -1,0 +1,5 @@
+[tool.pytest.ini_options]
+# Run from the repo root so `packages` and `scripts` import cleanly.
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-ra"

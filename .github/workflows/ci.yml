@@ -17,3 +17,22 @@ jobs:
           test -f .gitignore
           test -f .editorconfig
           test -f LICENSE
+
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Run test suite
+        run: python3 -m pytest -q
+      - name: Validate demo ledger integrity
+        run: python3 scripts/validate_ledger.py
+      - name: Scan committed files for secrets / PII
+        run: python3 scripts/scan_secrets.py
+      - name: Run demo end-to-end
+        run: python3 scripts/run_demo.py
