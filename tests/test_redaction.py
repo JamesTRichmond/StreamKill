@@ -75,6 +75,17 @@ def test_assert_no_secrets_rejects_high_entropy_blob():
         assert_no_secrets({"blob": "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7"})
 
 
+def test_assert_no_secrets_allows_snake_case_identifiers():
+    # A long snake_case id breaks into short word-like segments — not a secret.
+    # Regression: this exact id previously tripped the entropy guard.
+    assert_no_secrets({"receipt_id": "receipt_youtube_premium_redacted"})
+    assert_no_secrets({"id": "sub_icloud_2tb_illustrative_policy_example"})
+
+
+def test_assert_no_secrets_allows_uuid():
+    assert_no_secrets({"trace_id": "550e8400-e29b-41d4-a716-446655440000"})
+
+
 def test_assert_no_secrets_allows_urls_and_redaction_placeholders():
     # URLs and already-redacted markers must not trip the entropy guard.
     assert_no_secrets(

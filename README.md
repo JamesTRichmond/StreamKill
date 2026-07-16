@@ -46,16 +46,18 @@ It does not require live Gmail access, OAuth credentials, browser cookies, or re
 The trust claims in this repo are enforced in code, not just prose:
 
     pip install -r requirements-dev.txt
-    python3 -m pytest              # consent, redaction, retention, ledger tests
+    python3 -m pytest              # consent, redaction, retention, ledger, scan tests
     python3 scripts/validate_ledger.py   # demo ledger money math is self-consistent
+    python3 scripts/scan_secrets.py      # no secrets/PII in committed files
 
-CI runs the test suite, the ledger integrity check, and the demo end-to-end on
-every pull request. Key guarantees under test:
+CI runs the test suite, the ledger integrity check, the secret/PII scan, and
+the demo end-to-end on every pull request. Key guarantees under test:
 
 - Approval to scan never satisfies a cancellation check (per-item consent).
 - Secrets/PII are refused before they can reach disk or Git.
 - Raw scan artifacts expire; secret/raw kinds are never retained.
 - The demo ledger's summary totals match the underlying rows.
+- No committed file carries a token, key, card, or unredacted personal email.
 
 ## Core Trust Rule
 
@@ -105,6 +107,7 @@ Do not commit local credentials, browser profiles, OAuth secrets, cookies, or ra
 - docs/ — security, privacy, GTM, and demo runbook documents
 - packages/privacy/ — consent, redaction, and retention helper modules
 - packages/ledger/ — demo ledger integrity validator
+- packages/security/ — committed-artifact secret/PII scanner
 - scripts/ — executable demo and validation scripts
 - tests/ — pytest suite covering the trust rules and ledger math
 
