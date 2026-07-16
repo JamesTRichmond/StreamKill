@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/auth";
-import { readGrantedInbox } from "@/lib/google-oauth";
+import { connectGmail } from "@/lib/google-oauth";
 import { getUserById, createScanSession, saveContract } from "@/lib/store";
 import { issueContract } from "@/lib/contract";
+import { mintTokenRef } from "@/lib/token-vault";
 
 // The gate. After the customer connects a Gmail account, we read the granted
 // inbox address and compare it to their verified login email:
@@ -31,8 +32,9 @@ export async function GET(request: NextRequest) {
   }
 
   let grantedEmail: string;
+  let accessToken: string;
   try {
-    grantedEmail = await readGrantedInbox({ code, redirectUri });
+    ({ email: grantedEmail, accessToken } = await connectGmail({ code, redirectUri }));
   } catch {
     return clearState(NextResponse.redirect(new URL("/scan?error=connect", request.url)));
   }
@@ -51,6 +53,10 @@ export async function GET(request: NextRequest) {
 
   // Match — issue the scan_session and the signed execution_contract.
   const scanSession = createScanSession(user);
+  // Mint a single-use, TTL-bounded handle for the read-only token so the engine
+  // can do the live receipt fetch at scan time. The raw token never touches
+  // disk or the browser; only this opaque handle (token_ref) travels onward.
+  mintTokenRef(scanSession.id, accessToken);
   const signed = issueContract(scanSession, grantedEmail);
   saveContract(signed);
 
