@@ -91,6 +91,24 @@ def test_flags_structured_secret_in_data():
 
 # ----- sensitive-path rule targets artifacts, not source code -----
 
+def test_nested_test_dirs_are_exempt_from_content_scanning(tmp_path):
+    # A fake OAuth token in a NESTED test dir (e.g. apps/web/tests) must not be
+    # flagged — test fixtures legitimately carry secret-shaped strings — but the
+    # same string in a non-test source file MUST be.
+    subprocess.run(["git", "-C", str(tmp_path), "init", "-q"], check=True)
+    (tmp_path / "apps" / "web" / "tests").mkdir(parents=True)
+    (tmp_path / "apps" / "web" / "src").mkdir(parents=True)
+    token = "ya29.a0AfH6SMBxfake0token0value0for0testing0only"
+    (tmp_path / "apps" / "web" / "tests" / "x.test.ts").write_text(f'const t = "{token}";\n')
+    (tmp_path / "apps" / "web" / "src" / "leak.ts").write_text(f'const t = "{token}";\n')
+    subprocess.run(["git", "-C", str(tmp_path), "add", "-A"], check=True)
+
+    findings = scan_repo(str(tmp_path))
+    flagged = {f.path for f in findings}
+    assert "apps/web/tests/x.test.ts" not in flagged
+    assert "apps/web/src/leak.ts" in flagged
+
+
 def test_sensitive_path_rule_distinguishes_artifacts_from_source(tmp_path):
     # Regression: the scanner's own source files (e.g. secret_scan.py) contain
     # the blocked word "secret" in their name and must NOT be flagged, while a

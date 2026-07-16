@@ -184,3 +184,38 @@ both gates). Then swap in the live Gmail receipt fetch behind `token_ref`.
 
 Cancellation, pricing, white-label, ZIP flow. `cancel_subscription` stays
 `false`; there is no cancel endpoint.
+
+---
+
+## 7. Token redemption for the live fetch (PROPOSED — pending engine sign-off)
+
+The fixture milestone sends `token_ref: null`. For the live Gmail fetch, the web
+app mints a single-use, TTL-bounded handle for the read-only token at connect
+and sends it as `token_ref`. Lifecycle:
+
+- **Mint** — at Gmail connect (after the email-match gate), the web app stores
+  the read-only access token against an opaque handle `skref_<uuid>`, TTL ~2 min,
+  one live handle per scan session. The raw token never touches disk or the
+  browser. Dev implementation: in-process vault, `apps/web/src/lib/token-vault.ts`.
+- **Carry** — the handle travels to the engine as `token_ref` in the scan
+  request (§1). If it is missing/expired on a later revisit, `token_ref` is
+  `null` and the engine falls back (fixture, or ask the user to reconnect)
+  rather than failing.
+- **Redeem (PROPOSED)** — the engine exchanges the handle for the token exactly
+  once, then it is invalidated. Because the engine is a separate service and the
+  web app may be multi-instance, production requires:
+  1. a **shared TTL store** (e.g. Redis) behind the vault — the in-process Map is
+     dev-only; and
+  2. an **authenticated redeem endpoint** on the web app, e.g.
+     `POST /api/engine/token/redeem` with body `{ "token_ref": "skref_..." }` and
+     header `X-SK-Signature: HMAC_SHA256(CONTRACT_SIGNING_SECRET, token_ref)`,
+     returning `{ "access_token": "..." }` once (404/410 if unknown/expired/spent).
+
+**Open decisions for the engine + product owners:**
+- Stale-revisit scans: fall back to fixture, or force a fresh Gmail connect? (The
+  code already reserves the force-reconnect path for higher-risk actions.)
+- Final redeem transport/auth — the HMAC sketch above is a proposal.
+
+Nothing in this section is implemented engine-side yet. The web app's **mint +
+carry** are wired and tested against the mock (`apps/web/tests/token-ref-flow.test.ts`);
+the **redeem endpoint + shared store** are the remaining engine/infra pieces.

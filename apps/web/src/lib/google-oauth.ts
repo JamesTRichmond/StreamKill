@@ -65,13 +65,27 @@ export async function exchangeCodeForToken(params: {
 
 /**
  * Complete the connect step: exchange the code, read the granted inbox address
- * from Gmail, and return it. The token is used here and never persisted.
+ * from Gmail, and return both the address and the short-lived read-only token.
+ *
+ * The token is handed to the caller so it can be minted into a single-use,
+ * TTL-bounded handle for the scan (see lib/token-vault.ts). It is never
+ * persisted to disk and never sent to the browser.
+ */
+export async function connectGmail(params: {
+  code: string;
+  redirectUri: string;
+}): Promise<{ email: string; accessToken: string }> {
+  const accessToken = await exchangeCodeForToken(params);
+  const mailbox = await getBoundMailbox(accessToken);
+  return { email: mailbox.email, accessToken };
+}
+
+/**
+ * Back-compat: return just the granted inbox address (token discarded).
  */
 export async function readGrantedInbox(params: {
   code: string;
   redirectUri: string;
 }): Promise<string> {
-  const token = await exchangeCodeForToken(params);
-  const mailbox = await getBoundMailbox(token);
-  return mailbox.email;
+  return (await connectGmail(params)).email;
 }

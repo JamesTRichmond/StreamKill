@@ -46,11 +46,17 @@ DATA_PREFIX = "data/"
 # name but carry no real secrets (e.g. the canonical env template).
 PATH_ALLOWLIST = {".env.example"}
 
-# Directories excluded from *content* scanning. Test files deliberately embed
-# secret-shaped fixtures (fake cards, ``cookie=…`` strings, high-entropy blobs)
-# to exercise the very guards this scanner relies on; scanning them for secrets
-# is self-contradictory. Path-safety checks still apply to these files.
-CONTENT_SCAN_EXCLUDE_PREFIXES = ("tests/",)
+# Test files deliberately embed secret-shaped fixtures (fake cards, ``cookie=…``
+# strings, fake OAuth tokens, high-entropy blobs) to exercise the very guards
+# this scanner relies on; scanning them for secrets is self-contradictory.
+# Path-safety checks still apply to these files.
+
+
+def _in_test_dir(rel_path: str) -> bool:
+    """True for any path inside a ``tests/`` directory — root or nested, e.g.
+    ``tests/x.py`` or ``apps/web/tests/x.test.ts``. Content scanning is skipped
+    for these; path-safety still applies."""
+    return rel_path.startswith("tests/") or "/tests/" in rel_path
 
 # High-confidence secret signatures — these formats do not occur legitimately in
 # source/docs/tests, so they are flagged in ANY tracked file.
@@ -206,7 +212,7 @@ def scan_repo(root: str = ".") -> List[Finding]:
             continue
         if suffix not in TEXT_SUFFIXES:
             continue
-        if norm.startswith(CONTENT_SCAN_EXCLUDE_PREFIXES):
+        if _in_test_dir(norm):
             continue
         try:
             text = abs_path.read_text(encoding="utf-8")

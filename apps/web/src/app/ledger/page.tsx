@@ -10,6 +10,7 @@ import {
 } from "@/lib/store";
 import { runScan, ExecutionRefused } from "@/lib/engine";
 import { issueContract, isExpired } from "@/lib/contract";
+import { tokenRefForSession } from "@/lib/token-vault";
 
 const money = (n: number) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -78,10 +79,14 @@ export default async function LedgerPage({
 
   // Run through the engine boundary. It refuses unless the signed contract is
   // valid and every email matches. We pass the contract's own allowed inbox as
-  // the "connected inbox" it is about to act on.
+  // the "connected inbox" it is about to act on, plus the single-use token
+  // handle (if still live) so the engine can do the live receipt fetch. On a
+  // stale revisit the handle is gone (undefined) — the engine falls back to the
+  // fixture rather than dead-ending the owner.
+  const tokenRef = tokenRefForSession(scan.id);
   let ledger;
   try {
-    ledger = await runScan(signed, signed?.contract.allowed_inbox_email ?? "");
+    ledger = await runScan(signed, signed?.contract.allowed_inbox_email ?? "", { tokenRef });
   } catch (err) {
     const refused = err instanceof ExecutionRefused;
     return (
