@@ -5,9 +5,11 @@ import {
   getScanSession,
   latestReadySession,
   saveContract,
+  receiptForItem,
 } from "@/lib/store";
 import { issueContract } from "@/lib/contract";
 import { runScan } from "@/lib/engine";
+import { approveCancellation } from "@/lib/kill-room";
 
 const money = (n: number) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -43,6 +45,30 @@ export default async function CancelConfirmPage({
   if (!item || !item.cancelUrl) redirect(backToLedger);
 
   const domain = new URL(item.cancelUrl).host;
+  const alreadyApproved = Boolean(receiptForItem(scan.id, item.service));
+
+  // The moment of consent. Records a signed, per-item approval receipt
+  // server-side, THEN sends the owner to the service's own cancel page. The
+  // receipt is the Kill Room's proof of exactly what was approved, and when.
+  async function approveAndGo() {
+    "use server";
+    const session = await auth();
+    if (!session?.userId) redirect("/");
+    const user = getUserById(session.userId);
+    const scanNow = sessionId ? getScanSession(sessionId) : latestReadySession(user?.id ?? "");
+    if (!user || !scanNow || scanNow.user_id !== user.id) redirect("/scan");
+
+    // Re-derive the item from the engine again inside the action — never trust
+    // values captured in the form.
+    const signedNow = issueContract(scanNow, scanNow.verified_email);
+    saveContract(signedNow);
+    const ledger = await runScan(signedNow, signedNow.contract.allowed_inbox_email);
+    const itemNow = ledger.items.find((i) => i.service === service);
+    if (!itemNow?.cancelUrl) redirect(`/ledger?session=${scanNow.id}`);
+
+    approveCancellation({ user, scan: scanNow, item: itemNow });
+    redirect(itemNow.cancelUrl);
+  }
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 px-6 py-24 font-sans dark:bg-black">
@@ -70,14 +96,20 @@ export default async function CancelConfirmPage({
           </p>
         </div>
 
-        <a
-          href={item.cancelUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-6 flex h-12 w-full items-center justify-center rounded-full bg-red-600 px-6 text-base font-medium text-white transition-colors hover:bg-red-700"
-        >
-          Open {item.service}&apos;s cancel page →
-        </a>
+        <form action={approveAndGo}>
+          <button
+            type="submit"
+            className="mt-6 flex h-12 w-full items-center justify-center rounded-full bg-red-600 px-6 text-base font-medium text-white transition-colors hover:bg-red-700"
+          >
+            {alreadyApproved ? "Re-open" : "Approve and open"} {item.service}&apos;s cancel
+            page →
+          </button>
+        </form>
+        <p className="mt-2 text-center text-xs text-zinc-500">
+          {alreadyApproved
+            ? "You already approved this one — a signed receipt is on file."
+            : "Approving records a signed receipt of exactly what you authorized."}
+        </p>
 
         <a
           href={backToLedger}

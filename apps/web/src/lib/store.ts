@@ -2,6 +2,7 @@ import "server-only";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import type { SignedReceipt } from "@/lib/proof";
 
 // Minimal durable store for the trust-gate MVP.
 //
@@ -54,6 +55,7 @@ interface DB {
   users: User[];
   scan_sessions: ScanSession[];
   contracts: Record<string, SignedContract>; // keyed by scan_session_id
+  receipts?: SignedReceipt[]; // Kill Room approval proof receipts
 }
 
 const DATA_DIR = process.env.STREAMKILL_DATA_DIR ?? path.join(process.cwd(), ".data");
@@ -141,15 +143,39 @@ export function getContract(scanSessionId: string): SignedContract | undefined {
   return load().contracts[scanSessionId];
 }
 
+// ----- Kill Room proof receipts -----
+
+export function saveReceipt(signed: SignedReceipt): void {
+  const db = load();
+  db.receipts = db.receipts ?? [];
+  db.receipts.push(signed);
+  save(db);
+}
+
+export function receiptsForUser(userId: string): SignedReceipt[] {
+  return (load().receipts ?? []).filter((r) => r.receipt.user_id === userId);
+}
+
+/** The existing approval for one item in one scan session, if any (idempotency). */
+export function receiptForItem(
+  scanSessionId: string,
+  service: string,
+): SignedReceipt | undefined {
+  return (load().receipts ?? []).find(
+    (r) => r.receipt.scan_session_id === scanSessionId && r.receipt.service === service,
+  );
+}
+
 // Full disconnect: erase everything we hold for this user — the user record,
-// all their scan_sessions, and all their contracts. (We never store tokens, so
-// there is nothing else to purge.) Idempotent.
+// all their scan_sessions, contracts, and proof receipts. (We never store
+// tokens, so there is nothing else to purge.) Idempotent.
 export function deleteUserData(userId: string): { sessions: number } {
   const db = load();
   const theirSessions = db.scan_sessions.filter((s) => s.user_id === userId);
   for (const s of theirSessions) delete db.contracts[s.id];
   db.scan_sessions = db.scan_sessions.filter((s) => s.user_id !== userId);
   db.users = db.users.filter((u) => u.id !== userId);
+  db.receipts = (db.receipts ?? []).filter((r) => r.receipt.user_id !== userId);
   save(db);
   return { sessions: theirSessions.length };
 }

@@ -136,6 +136,12 @@ export default async function LedgerPage({
           </div>
           <div className="flex items-center gap-3">
             <a
+              href="/receipts"
+              className="text-sm font-medium text-emerald-700 underline-offset-4 hover:underline dark:text-emerald-400"
+            >
+              Proof receipts
+            </a>
+            <a
               href="/disconnect"
               className="text-sm font-medium text-red-600 underline-offset-4 hover:underline"
             >
