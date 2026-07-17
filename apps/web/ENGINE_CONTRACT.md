@@ -72,9 +72,9 @@ Request body:
 
 - `connected_inbox` = the inbox actually being acted on (today equals
   `allowed_inbox_email`; sent explicitly so the engine can compare, not infer).
-- `token_ref` = handle for a short-lived read-only Gmail token. `null` for the
-  fixture milestone; populated when the live-fetch path lands. **Never a raw
-  password. Never a long-lived token.**
+- `token_ref` = handle for a short-lived read-only Gmail token (§7). `null` on
+  a stale revisit (the engine falls back to the fixture); populated on the
+  live fetch path. **Never a raw password. Never a long-lived token.**
 
 ---
 
@@ -116,8 +116,9 @@ def canonical(c: dict) -> str:
         "verified_email": c["verified_email"],
     }
     # sort_keys=True + no-space separators reproduces JSON.stringify of the
-    # alphabetically-ordered object above.
-    return json.dumps(payload, separators=(",", ":"), sort_keys=True)
+    # alphabetically-ordered object above. ensure_ascii=False matters for
+    # byte-parity: JSON.stringify does NOT \u-escape non-ASCII.
+    return json.dumps(payload, separators=(",", ":"), sort_keys=True, ensure_ascii=False)
 
 def verify(contract: dict, signature: str) -> bool:
     secret = os.environ["CONTRACT_SIGNING_SECRET"].encode()
@@ -187,7 +188,7 @@ Cancellation, pricing, white-label, ZIP flow. `cancel_subscription` stays
 
 ---
 
-## 7. Token redemption for the live fetch (PROPOSED — pending engine sign-off)
+## 7. Token redemption for the live fetch
 
 The fixture milestone sends `token_ref: null`. For the live Gmail fetch, the web
 app mints a single-use, TTL-bounded handle for the read-only token at connect
@@ -221,11 +222,19 @@ and sends it as `token_ref`. Lifecycle:
   — the in-process Map (`lib/token-vault.ts`) is dev-only, so redeem only works
   when the web app is a single instance until that swap lands.
 
-**Open decisions for the engine + product owners:**
-- Stale-revisit scans: fall back to fixture, or force a fresh Gmail connect? (The
-  code already reserves the force-reconnect path for higher-risk actions.)
-- Final redeem transport/auth — the HMAC sketch above is a proposal.
+**Settled (both sides implement the transport above):**
+- Stale-revisit scans **fall back to the fixture** — the engine treats any
+  non-200 redemption as "no live token" and scans fixtures instead of failing.
+  The force-reconnect path stays reserved for higher-risk actions
+  (cancellation).
+- Redeem transport/auth is the HMAC scheme above, no longer a proposal.
 
-Nothing in this section is implemented engine-side yet. The web app's **mint +
-carry** are wired and tested against the mock (`apps/web/tests/token-ref-flow.test.ts`);
-the **redeem endpoint + shared store** are the remaining engine/infra pieces.
+Web-side **mint + carry + redeem endpoint** are wired and tested
+(`apps/web/tests/token-ref-flow.test.ts`, `apps/web/tests/token-redeem.test.ts`,
+`apps/web/tests/token-redeem-endpoint.test.ts`). The private Python engine
+(`engine/stream-kill/engine_service.py` in the engine repo) implements the
+matching redeem client and the live Gmail fetch behind it: it redeems the
+handle once, confirms with Gmail that the token is bound to exactly the
+contract's `allowed_inbox_email` (refusing `email_mismatch` otherwise), and
+runs the detector read-only. The **shared TTL store** noted above is the one
+remaining infra piece.
