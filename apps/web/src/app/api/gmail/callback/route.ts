@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
   // Mint a single-use, TTL-bounded handle for the read-only token so the engine
   // can do the live receipt fetch at scan time. The raw token never touches
   // disk or the browser; only this opaque handle (token_ref) travels onward.
-  mintTokenRef(scanSession.id, accessToken);
+  await mintTokenRef(scanSession.id, accessToken);
   const signed = issueContract(scanSession, grantedEmail);
   await saveContract(signed);
 

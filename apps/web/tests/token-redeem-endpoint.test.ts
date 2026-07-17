@@ -22,11 +22,11 @@ function redeemRequest(body: unknown, signature?: string): NextRequest {
   });
 }
 
-beforeEach(() => resetVaultForTests());
+beforeEach(async () => { await resetVaultForTests(); });
 
 describe("POST /api/engine/token/redeem (wire-level)", () => {
   it("redeems a live handle exactly once, then answers 410 on replay", async () => {
-    const ref = mintTokenRef("sess-1", "ya29.readonly-token");
+    const ref = await mintTokenRef("sess-1", "ya29.readonly-token");
 
     const first = await POST(redeemRequest({ token_ref: ref }, redeemSignature(ref, SECRET)));
     expect(first.status).toBe(200);
@@ -40,7 +40,7 @@ describe("POST /api/engine/token/redeem (wire-level)", () => {
   });
 
   it("answers 410 for expired and never-minted handles alike", async () => {
-    const ref = mintTokenRef("sess-2", "tok", 1); // 1 ms TTL
+    const ref = await mintTokenRef("sess-2", "tok", 1); // 1 ms TTL
     await new Promise((r) => setTimeout(r, 10));
     const expired = await POST(redeemRequest({ token_ref: ref }, redeemSignature(ref, SECRET)));
     expect(expired.status).toBe(410);
@@ -51,7 +51,7 @@ describe("POST /api/engine/token/redeem (wire-level)", () => {
   });
 
   it("rejects a bad or missing X-SK-Signature without burning the handle", async () => {
-    const ref = mintTokenRef("sess-3", "tok");
+    const ref = await mintTokenRef("sess-3", "tok");
 
     // Missing header → the body may be fine, but the request is unauthenticated.
     const missing = await POST(redeemRequest({ token_ref: ref }));

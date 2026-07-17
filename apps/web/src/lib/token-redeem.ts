@@ -24,7 +24,10 @@ export interface RedeemResult {
   body: { access_token: string } | { error: string };
 }
 
-export function handleRedeem(input: { tokenRef?: unknown; signature?: unknown }): RedeemResult {
+export async function handleRedeem(input: {
+  tokenRef?: unknown;
+  signature?: unknown;
+}): Promise<RedeemResult> {
   const secret = signingSecret();
   if (!secret) return { status: 500, body: { error: "server_misconfigured" } };
 
@@ -39,7 +42,7 @@ export function handleRedeem(input: { tokenRef?: unknown; signature?: unknown })
     return { status: 401, body: { error: "unauthorized" } };
   }
 
-  const token = redeemTokenRef(input.tokenRef);
+  const token = await redeemTokenRef(input.tokenRef);
   if (!token) return { status: 410, body: { error: "token_ref_unavailable" } };
 
   return { status: 200, body: { access_token: token } };

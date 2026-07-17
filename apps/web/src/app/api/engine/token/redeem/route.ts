@@ -13,6 +13,6 @@ export async function POST(request: NextRequest) {
   }
 
   const signature = request.headers.get("x-sk-signature") ?? undefined;
-  const result = handleRedeem({ tokenRef: body?.token_ref, signature });
+  const result = await handleRedeem({ tokenRef: body?.token_ref, signature });
   return NextResponse.json(result.body, { status: result.status });
 }
