@@ -197,11 +197,12 @@ and sends it as `token_ref`. Lifecycle:
 - **Mint** — at Gmail connect (after the email-match gate), the web app stores
   the read-only access token against an opaque handle `skref_<uuid>`, TTL ~2 min,
   one live handle per scan session. The raw token never touches disk or the
-  browser. Dev implementation: in-process vault, `apps/web/src/lib/token-vault.ts`.
+  browser. Vault facade: `apps/web/src/lib/token-vault.ts` (driver-backed —
+  shared Postgres with `DATABASE_URL`, in-process otherwise; see Redeem below).
 - **Carry** — the handle travels to the engine as `token_ref` in the scan
   request (§1). If it is missing/expired on a later revisit, `token_ref` is
-  `null` and the engine falls back (fixture, or ask the user to reconnect)
-  rather than failing.
+  `null` and the engine falls back to the fixture rather than failing (the
+  settled stale-revisit policy below).
 - **Redeem** — the engine exchanges the handle for the token exactly once, then
   it is invalidated. The web endpoint is **implemented**:
 
@@ -213,10 +214,13 @@ and sends it as `token_ref`. Lifecycle:
   { "token_ref": "skref_..." }
   ```
 
-  Responses: `200 { "access_token": "..." }` once · `401` bad/missing signature ·
-  `410 { "error": "token_ref_unavailable" }` unknown/expired/spent · `400`
-  malformed. A failed-auth attempt does NOT consume the handle. The engine must
-  send the HMAC; only a caller holding `CONTRACT_SIGNING_SECRET` can redeem.
+  Responses: `200 { "access_token": "..." }` once ·
+  `401 { "error": "unauthorized" }` present-but-wrong signature ·
+  `410 { "error": "token_ref_unavailable" }` unknown/expired/spent ·
+  `400 { "error": "bad_request" }` malformed body or missing signature header.
+  A failed-auth attempt (400 or 401) does NOT consume the handle. The engine
+  must send the HMAC; only a caller holding `CONTRACT_SIGNING_SECRET` can
+  redeem. (Wire-level assertions: `tests/token-redeem-endpoint.test.ts`.)
 
   The vault is driver-backed (`lib/vault/`): with `DATABASE_URL` set it uses a
   **shared Postgres table** (`sk_token_vault`) — any instance can mint and any
