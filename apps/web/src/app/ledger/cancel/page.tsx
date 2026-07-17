@@ -21,11 +21,11 @@ export default async function CancelConfirmPage({
 }) {
   const session = await auth();
   if (!session?.userId) redirect("/");
-  const user = getUserById(session.userId);
+  const user = await getUserById(session.userId);
   if (!user) redirect("/");
 
   const { session: sessionId, service } = await searchParams;
-  const scan = sessionId ? getScanSession(sessionId) : latestReadySession(user.id);
+  const scan = sessionId ? await getScanSession(sessionId) : await latestReadySession(user.id);
   if (!scan || scan.user_id !== user.id) redirect("/scan");
   const backToLedger = `/ledger?session=${scan.id}`;
   if (!service) redirect(backToLedger);
@@ -34,7 +34,7 @@ export default async function CancelConfirmPage({
   // URL passed in the query string. The engine's catalog is integrity-sealed,
   // so the cancel link it returns is the trustworthy one.
   const signed = issueContract(scan, scan.verified_email);
-  saveContract(signed);
+  await saveContract(signed);
   let item;
   try {
     const ledger = await runScan(signed, signed.contract.allowed_inbox_email);
@@ -45,7 +45,7 @@ export default async function CancelConfirmPage({
   if (!item || !item.cancelUrl) redirect(backToLedger);
 
   const domain = new URL(item.cancelUrl).host;
-  const alreadyApproved = Boolean(receiptForItem(scan.id, item.service));
+  const alreadyApproved = Boolean(await receiptForItem(scan.id, item.service));
 
   // The moment of consent. Records a signed, per-item approval receipt
   // server-side, THEN sends the owner to the service's own cancel page. The
@@ -54,19 +54,21 @@ export default async function CancelConfirmPage({
     "use server";
     const session = await auth();
     if (!session?.userId) redirect("/");
-    const user = getUserById(session.userId);
-    const scanNow = sessionId ? getScanSession(sessionId) : latestReadySession(user?.id ?? "");
+    const user = await getUserById(session.userId);
+    const scanNow = sessionId
+      ? await getScanSession(sessionId)
+      : await latestReadySession(user?.id ?? "");
     if (!user || !scanNow || scanNow.user_id !== user.id) redirect("/scan");
 
     // Re-derive the item from the engine again inside the action — never trust
     // values captured in the form.
     const signedNow = issueContract(scanNow, scanNow.verified_email);
-    saveContract(signedNow);
+    await saveContract(signedNow);
     const ledger = await runScan(signedNow, signedNow.contract.allowed_inbox_email);
     const itemNow = ledger.items.find((i) => i.service === service);
     if (!itemNow?.cancelUrl) redirect(`/ledger?session=${scanNow.id}`);
 
-    approveCancellation({ user, scan: scanNow, item: itemNow });
+    await approveCancellation({ user, scan: scanNow, item: itemNow });
     redirect(itemNow.cancelUrl);
   }
 

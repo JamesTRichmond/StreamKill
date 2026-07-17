@@ -12,10 +12,10 @@ const money = (n: number) =>
 export default async function ReceiptsPage() {
   const session = await auth();
   if (!session?.userId) redirect("/");
-  const user = getUserById(session.userId);
+  const user = await getUserById(session.userId);
   if (!user) redirect("/");
 
-  const receipts = receiptsForUser(user.id)
+  const receipts = (await receiptsForUser(user.id))
     .map((signed) => ({ signed, valid: verifyReceipt(signed) }))
     .sort((a, b) =>
       b.signed.receipt.approved_at.localeCompare(a.signed.receipt.approved_at),
