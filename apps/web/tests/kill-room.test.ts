@@ -50,51 +50,51 @@ function item(over: Partial<LeakItem> = {}): LeakItem {
 }
 
 describe("Kill Room — per-item approval with signed proof", () => {
-  it("records a signed, verifiable receipt at the moment of approval", () => {
-    const signed = approveCancellation({ user, scan, item: item() });
+  it("records a signed, verifiable receipt at the moment of approval", async () => {
+    const signed = await approveCancellation({ user, scan, item: item() });
     expect(signed.receipt.service).toBe("Netflix");
     expect(signed.receipt.action).toBe("approved_cancellation");
     expect(verifyReceipt(signed)).toBe(true);
-    expect(receiptsForUser(user.id)).toHaveLength(1);
+    expect(await receiptsForUser(user.id)).toHaveLength(1);
   });
 
-  it("refuses to approve a blocked (do-not-auto-kill) item — server-side, not just UI", () => {
-    expect(() =>
+  it("refuses to approve a blocked (do-not-auto-kill) item — server-side, not just UI", async () => {
+    await expect(
       approveCancellation({ user, scan, item: item({ status: "blocked" }) }),
-    ).toThrowError(ApprovalRefused);
-    expect(receiptsForUser(user.id)).toHaveLength(0);
+    ).rejects.toThrowError(ApprovalRefused);
+    expect(await receiptsForUser(user.id)).toHaveLength(0);
   });
 
-  it("refuses when the item has no cancellation route", () => {
-    expect(() =>
+  it("refuses when the item has no cancellation route", async () => {
+    await expect(
       approveCancellation({ user, scan, item: item({ cancelUrl: undefined }) }),
-    ).toThrowError(ApprovalRefused);
+    ).rejects.toThrowError(ApprovalRefused);
   });
 
-  it("refuses when the scan session belongs to someone else", () => {
+  it("refuses when the scan session belongs to someone else", async () => {
     const foreignScan: ScanSession = { ...scan, user_id: "someone-else" };
-    expect(() => approveCancellation({ user, scan: foreignScan, item: item() })).toThrowError(
+    await expect(approveCancellation({ user, scan: foreignScan, item: item() })).rejects.toThrowError(
       ApprovalRefused,
     );
   });
 
-  it("is idempotent — approving the same item twice yields one receipt", () => {
-    const first = approveCancellation({ user, scan, item: item() });
-    const second = approveCancellation({ user, scan, item: item() });
+  it("is idempotent — approving the same item twice yields one receipt", async () => {
+    const first = await approveCancellation({ user, scan, item: item() });
+    const second = await approveCancellation({ user, scan, item: item() });
     expect(second.receipt.id).toBe(first.receipt.id);
-    expect(receiptsForUser(user.id)).toHaveLength(1);
+    expect(await receiptsForUser(user.id)).toHaveLength(1);
   });
 
-  it("approval is per scan session — a new session needs a fresh approval", () => {
-    approveCancellation({ user, scan, item: item() });
+  it("approval is per scan session — a new session needs a fresh approval", async () => {
+    await approveCancellation({ user, scan, item: item() });
     const laterScan: ScanSession = { ...scan, id: "sess-2" };
-    approveCancellation({ user, scan: laterScan, item: item() });
-    expect(receiptsForUser(user.id)).toHaveLength(2);
-    expect(receiptForItem("sess-2", "Netflix")).toBeDefined();
+    await approveCancellation({ user, scan: laterScan, item: item() });
+    expect(await receiptsForUser(user.id)).toHaveLength(2);
+    expect(await receiptForItem("sess-2", "Netflix")).toBeDefined();
   });
 
-  it("tampering with a stored receipt is detectable", () => {
-    const signed = approveCancellation({ user, scan, item: item() });
+  it("tampering with a stored receipt is detectable", async () => {
+    const signed = await approveCancellation({ user, scan, item: item() });
     const tampered = {
       ...signed,
       receipt: { ...signed.receipt, amount: 0.01 },
@@ -102,16 +102,16 @@ describe("Kill Room — per-item approval with signed proof", () => {
     expect(verifyReceipt(tampered)).toBe(false);
   });
 
-  it("deleteUserData wipes receipts along with everything else", () => {
-    approveCancellation({ user, scan, item: item() });
-    expect(receiptsForUser(user.id)).toHaveLength(1);
-    deleteUserData(user.id);
-    expect(receiptsForUser(user.id)).toHaveLength(0);
+  it("deleteUserData wipes receipts along with everything else", async () => {
+    await approveCancellation({ user, scan, item: item() });
+    expect(await receiptsForUser(user.id)).toHaveLength(1);
+    await deleteUserData(user.id);
+    expect(await receiptsForUser(user.id)).toHaveLength(0);
   });
 });
 
 describe("proof receipts — signing discipline", () => {
-  it("normalizes the email and produces a stable id + hex signature", () => {
+  it("normalizes the email and produces a stable id + hex signature", async () => {
     const signed = issueApprovalReceipt({
       userId: "u",
       scanSessionId: "s",

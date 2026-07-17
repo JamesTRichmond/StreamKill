@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     return clearState(NextResponse.redirect(new URL("/scan?error=connect", request.url)));
   }
 
-  const user = getUserById(session.userId);
+  const user = await getUserById(session.userId);
   if (!user) {
     return clearState(NextResponse.redirect(new URL("/", request.url)));
   }
@@ -52,13 +52,13 @@ export async function GET(request: NextRequest) {
   }
 
   // Match — issue the scan_session and the signed execution_contract.
-  const scanSession = createScanSession(user);
+  const scanSession = await createScanSession(user);
   // Mint a single-use, TTL-bounded handle for the read-only token so the engine
   // can do the live receipt fetch at scan time. The raw token never touches
   // disk or the browser; only this opaque handle (token_ref) travels onward.
   mintTokenRef(scanSession.id, accessToken);
   const signed = issueContract(scanSession, grantedEmail);
-  saveContract(signed);
+  await saveContract(signed);
 
   const to = new URL("/ledger", request.url);
   to.searchParams.set("session", scanSession.id);

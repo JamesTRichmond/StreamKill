@@ -1,17 +1,19 @@
 import "server-only";
-import fs from "node:fs";
-import path from "node:path";
-import crypto from "node:crypto";
 import type { SignedReceipt } from "@/lib/proof";
+import type { StorageDriver } from "@/lib/storage/driver";
+import { createJsonDriver } from "@/lib/storage/json-driver";
+import { createPostgresDriver } from "@/lib/storage/postgres-driver";
 
-// Minimal durable store for the trust-gate MVP.
+// Durable store for the trust gate + Kill Room.
 //
-// IMPORTANT: this stores identity/session RECORDS only — never credentials,
-// tokens, or passwords. OAuth tokens are used transiently in the connect
-// callback and discarded; they are never written here.
+// IMPORTANT: this stores identity/session RECORDS and signed proof receipts
+// only — never credentials, tokens, or passwords. OAuth tokens live in the
+// in-memory vault (lib/token-vault.ts) and are never written here.
 //
-// Backed by a single JSON file so the MVP has no DB dependency. The interface
-// is deliberately swappable for Postgres/SQLite later.
+// Backed by a storage driver:
+//   - DATABASE_URL set   -> Postgres (production)
+//   - otherwise          -> single JSON file (dev/demo)
+// Pages and routes call these functions only; they never touch a driver.
 
 export interface User {
   id: string;
@@ -51,131 +53,69 @@ export interface SignedContract {
   signature: string;
 }
 
-interface DB {
-  users: User[];
-  scan_sessions: ScanSession[];
-  contracts: Record<string, SignedContract>; // keyed by scan_session_id
-  receipts?: SignedReceipt[]; // Kill Room approval proof receipts
-}
+let driver: StorageDriver | undefined;
 
-const DATA_DIR = process.env.STREAMKILL_DATA_DIR ?? path.join(process.cwd(), ".data");
-const DATA_FILE = path.join(DATA_DIR, "streamkill.json");
-
-function load(): DB {
-  try {
-    return JSON.parse(fs.readFileSync(DATA_FILE, "utf8")) as DB;
-  } catch {
-    return { users: [], scan_sessions: [], contracts: {} };
+function db(): StorageDriver {
+  if (!driver) {
+    const url = process.env.DATABASE_URL;
+    driver = url ? createPostgresDriver(url) : createJsonDriver();
   }
-}
-
-function save(db: DB): void {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
+  return driver;
 }
 
 export function upsertUser(input: {
   provider: string;
   providerAccountId: string;
   email: string;
-}): User {
-  const db = load();
-  const email = input.email.toLowerCase();
-  const existing = db.users.find(
-    (u) =>
-      u.auth_provider === input.provider &&
-      u.auth_provider_user_id === input.providerAccountId,
-  );
-  if (existing) {
-    if (existing.verified_email !== email) {
-      existing.verified_email = email;
-      save(db);
-    }
-    return existing;
-  }
-  const user: User = {
-    id: crypto.randomUUID(),
-    verified_email: email,
-    auth_provider: input.provider,
-    auth_provider_user_id: input.providerAccountId,
-    created_at: new Date().toISOString(),
-  };
-  db.users.push(user);
-  save(db);
-  return user;
+}): Promise<User> {
+  return db().upsertUser(input);
 }
 
-export function getUserById(id: string): User | undefined {
-  return load().users.find((u) => u.id === id);
+export function getUserById(id: string): Promise<User | undefined> {
+  return db().getUserById(id);
 }
 
-export function createScanSession(user: User): ScanSession {
-  const db = load();
-  const session: ScanSession = {
-    id: crypto.randomUUID(),
-    user_id: user.id,
-    verified_email: user.verified_email,
-    status: "ready",
-    created_at: new Date().toISOString(),
-  };
-  db.scan_sessions.push(session);
-  save(db);
-  return session;
+export function createScanSession(user: User): Promise<ScanSession> {
+  return db().createScanSession(user);
 }
 
-export function getScanSession(id: string): ScanSession | undefined {
-  return load().scan_sessions.find((s) => s.id === id);
+export function getScanSession(id: string): Promise<ScanSession | undefined> {
+  return db().getScanSession(id);
 }
 
-export function latestReadySession(userId: string): ScanSession | undefined {
-  return load()
-    .scan_sessions.filter((s) => s.user_id === userId && s.status === "ready")
-    .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+export function latestReadySession(userId: string): Promise<ScanSession | undefined> {
+  return db().latestReadySession(userId);
 }
 
-export function saveContract(signed: SignedContract): void {
-  const db = load();
-  db.contracts[signed.contract.scan_session_id] = signed;
-  save(db);
+export function saveContract(signed: SignedContract): Promise<void> {
+  return db().saveContract(signed);
 }
 
-export function getContract(scanSessionId: string): SignedContract | undefined {
-  return load().contracts[scanSessionId];
+export function getContract(scanSessionId: string): Promise<SignedContract | undefined> {
+  return db().getContract(scanSessionId);
 }
 
 // ----- Kill Room proof receipts -----
 
-export function saveReceipt(signed: SignedReceipt): void {
-  const db = load();
-  db.receipts = db.receipts ?? [];
-  db.receipts.push(signed);
-  save(db);
+export function saveReceipt(signed: SignedReceipt): Promise<void> {
+  return db().saveReceipt(signed);
 }
 
-export function receiptsForUser(userId: string): SignedReceipt[] {
-  return (load().receipts ?? []).filter((r) => r.receipt.user_id === userId);
+export function receiptsForUser(userId: string): Promise<SignedReceipt[]> {
+  return db().receiptsForUser(userId);
 }
 
 /** The existing approval for one item in one scan session, if any (idempotency). */
 export function receiptForItem(
   scanSessionId: string,
   service: string,
-): SignedReceipt | undefined {
-  return (load().receipts ?? []).find(
-    (r) => r.receipt.scan_session_id === scanSessionId && r.receipt.service === service,
-  );
+): Promise<SignedReceipt | undefined> {
+  return db().receiptForItem(scanSessionId, service);
 }
 
 // Full disconnect: erase everything we hold for this user — the user record,
 // all their scan_sessions, contracts, and proof receipts. (We never store
 // tokens, so there is nothing else to purge.) Idempotent.
-export function deleteUserData(userId: string): { sessions: number } {
-  const db = load();
-  const theirSessions = db.scan_sessions.filter((s) => s.user_id === userId);
-  for (const s of theirSessions) delete db.contracts[s.id];
-  db.scan_sessions = db.scan_sessions.filter((s) => s.user_id !== userId);
-  db.users = db.users.filter((u) => u.id !== userId);
-  db.receipts = (db.receipts ?? []).filter((r) => r.receipt.user_id !== userId);
-  save(db);
-  return { sessions: theirSessions.length };
+export function deleteUserData(userId: string): Promise<{ sessions: number }> {
+  return db().deleteUserData(userId);
 }

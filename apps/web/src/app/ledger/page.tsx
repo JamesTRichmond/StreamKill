@@ -54,15 +54,15 @@ export default async function LedgerPage({
 }) {
   const session = await auth();
   if (!session?.userId) redirect("/");
-  const user = getUserById(session.userId);
+  const user = await getUserById(session.userId);
   if (!user) redirect("/");
 
   // Resolve the scan_session — must belong to this user.
   const { session: sessionId } = await searchParams;
-  const scan = sessionId ? getScanSession(sessionId) : latestReadySession(user.id);
+  const scan = sessionId ? await getScanSession(sessionId) : await latestReadySession(user.id);
   if (!scan || scan.user_id !== user.id) redirect("/scan");
 
-  let signed = getContract(scan.id);
+  let signed = await getContract(scan.id);
 
   // The contract is minted at Gmail-connect with a short TTL but consumed here.
   // A benign timeout (or revisiting this page) should NOT dead-end the verified
@@ -74,7 +74,7 @@ export default async function LedgerPage({
   // instead of silently re-issuing.
   if (!signed || isExpired(signed.contract)) {
     signed = issueContract(scan, scan.verified_email);
-    saveContract(signed);
+    await saveContract(signed);
   }
 
   // Run through the engine boundary. It refuses unless the signed contract is

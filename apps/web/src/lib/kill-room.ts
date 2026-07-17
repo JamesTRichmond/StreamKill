@@ -24,11 +24,11 @@ export class ApprovalRefused extends Error {
   }
 }
 
-export function approveCancellation(input: {
+export async function approveCancellation(input: {
   user: User;
   scan: ScanSession;
   item: LeakItem;
-}): SignedReceipt {
+}): Promise<SignedReceipt> {
   const { user, scan, item } = input;
 
   if (scan.user_id !== user.id) {
@@ -44,7 +44,7 @@ export function approveCancellation(input: {
     throw new ApprovalRefused("no_cancel_route", `${item.service} has no known cancellation route.`);
   }
 
-  const existing = receiptForItem(scan.id, item.service);
+  const existing = await receiptForItem(scan.id, item.service);
   if (existing) return existing;
 
   const signed = issueApprovalReceipt({
@@ -56,6 +56,6 @@ export function approveCancellation(input: {
     cadence: item.cadence,
     cancelUrl: item.cancelUrl,
   });
-  saveReceipt(signed);
+  await saveReceipt(signed);
   return signed;
 }

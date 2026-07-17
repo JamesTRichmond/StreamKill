@@ -19,7 +19,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     async jwt({ token, account, profile }) {
       if (account && profile?.email) {
-        const user = upsertUser({
+        const user = await upsertUser({
           provider: account.provider,
           providerAccountId: account.providerAccountId,
           email: profile.email,

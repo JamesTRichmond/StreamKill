@@ -28,52 +28,52 @@ beforeEach(() => {
 });
 
 describe("store — identity/session records (never tokens)", () => {
-  it("upsertUser is idempotent by provider + account id", () => {
-    const a = upsertUser({ provider: "google", providerAccountId: "gid-1", email: "james@gmail.com" });
-    const b = upsertUser({ provider: "google", providerAccountId: "gid-1", email: "james@gmail.com" });
+  it("upsertUser is idempotent by provider + account id", async () => {
+    const a = await upsertUser({ provider: "google", providerAccountId: "gid-1", email: "james@gmail.com" });
+    const b = await upsertUser({ provider: "google", providerAccountId: "gid-1", email: "james@gmail.com" });
     expect(a.id).toBe(b.id);
-    expect(getUserById(a.id)?.verified_email).toBe("james@gmail.com");
+    expect((await getUserById(a.id))?.verified_email).toBe("james@gmail.com");
   });
 
-  it("creates and retrieves the latest ready scan session", () => {
-    const u = upsertUser({ provider: "google", providerAccountId: "gid-2", email: "a@b.co" });
-    const s = createScanSession(u);
-    expect(getScanSession(s.id)?.id).toBe(s.id);
-    expect(latestReadySession(u.id)?.id).toBe(s.id);
+  it("creates and retrieves the latest ready scan session", async () => {
+    const u = await upsertUser({ provider: "google", providerAccountId: "gid-2", email: "a@b.co" });
+    const s = await createScanSession(u);
+    expect((await getScanSession(s.id))?.id).toBe(s.id);
+    expect((await latestReadySession(u.id))?.id).toBe(s.id);
   });
 
-  it("roundtrips a signed contract by scan-session id", () => {
-    const u = upsertUser({ provider: "google", providerAccountId: "gid-3", email: "a@b.co" });
-    const s = createScanSession(u);
+  it("roundtrips a signed contract by scan-session id", async () => {
+    const u = await upsertUser({ provider: "google", providerAccountId: "gid-3", email: "a@b.co" });
+    const s = await createScanSession(u);
     const signed = issueContract(s, "a@b.co");
-    saveContract(signed);
-    expect(getContract(s.id)?.signature).toBe(signed.signature);
+    await saveContract(signed);
+    expect((await getContract(s.id))?.signature).toBe(signed.signature);
   });
 
-  it("deleteUserData erases the user + their sessions + contracts, and is idempotent", () => {
-    const u = upsertUser({ provider: "google", providerAccountId: "gid-4", email: "a@b.co" });
-    const s = createScanSession(u);
-    saveContract(issueContract(s, "a@b.co"));
+  it("deleteUserData erases the user + their sessions + contracts, and is idempotent", async () => {
+    const u = await upsertUser({ provider: "google", providerAccountId: "gid-4", email: "a@b.co" });
+    const s = await createScanSession(u);
+    await saveContract(issueContract(s, "a@b.co"));
 
-    const res = deleteUserData(u.id);
+    const res = await deleteUserData(u.id);
     expect(res.sessions).toBe(1);
-    expect(getUserById(u.id)).toBeUndefined();
-    expect(getScanSession(s.id)).toBeUndefined();
-    expect(getContract(s.id)).toBeUndefined();
+    expect(await getUserById(u.id)).toBeUndefined();
+    expect(await getScanSession(s.id)).toBeUndefined();
+    expect(await getContract(s.id)).toBeUndefined();
 
     // idempotent — a second disconnect is a no-op
-    expect(deleteUserData(u.id).sessions).toBe(0);
+    expect((await deleteUserData(u.id)).sessions).toBe(0);
   });
 
-  it("deleteUserData leaves other users' data intact", () => {
-    const keep = upsertUser({ provider: "google", providerAccountId: "keep", email: "keep@b.co" });
-    const keepSession = createScanSession(keep);
-    const drop = upsertUser({ provider: "google", providerAccountId: "drop", email: "drop@b.co" });
-    createScanSession(drop);
+  it("deleteUserData leaves other users' data intact", async () => {
+    const keep = await upsertUser({ provider: "google", providerAccountId: "keep", email: "keep@b.co" });
+    const keepSession = await createScanSession(keep);
+    const drop = await upsertUser({ provider: "google", providerAccountId: "drop", email: "drop@b.co" });
+    await createScanSession(drop);
 
-    deleteUserData(drop.id);
+    await deleteUserData(drop.id);
 
-    expect(getUserById(keep.id)?.id).toBe(keep.id);
-    expect(getScanSession(keepSession.id)?.id).toBe(keepSession.id);
+    expect((await getUserById(keep.id))?.id).toBe(keep.id);
+    expect((await getScanSession(keepSession.id))?.id).toBe(keepSession.id);
   });
 });

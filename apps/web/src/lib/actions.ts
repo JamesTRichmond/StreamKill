@@ -8,7 +8,7 @@ import { deleteUserData } from "@/lib/store";
 export async function disconnectAccount() {
   const session = await auth();
   if (session?.userId) {
-    deleteUserData(session.userId);
+    await deleteUserData(session.userId);
   }
   // Clears the session cookie and redirects to the landing page with a notice.
   await signOut({ redirectTo: "/?disconnected=1" });
