@@ -39,12 +39,12 @@ function startRedeemingServer(secret: string, captured: Captured): Promise<{ url
   const server = http.createServer((req, res) => {
     const chunks: Buffer[] = [];
     req.on("data", (c: Buffer) => chunks.push(c));
-    req.on("end", () => {
+    req.on("end", async () => {
       const raw = chunks.length ? JSON.parse(Buffer.concat(chunks).toString("utf8")) : null;
       captured.requestValid = validateRequest(raw) as boolean;
       captured.tokenRef = (raw as { token_ref?: unknown })?.token_ref;
       if (typeof captured.tokenRef === "string") {
-        captured.redeemedToken = redeemTokenRef(captured.tokenRef);
+        captured.redeemedToken = await redeemTokenRef(captured.tokenRef);
       }
       const result = handleScan(raw, { secret });
       res.writeHead(result.status, { "content-type": "application/json" });
@@ -70,20 +70,20 @@ async function withEngineUrl<T>(url: string, fn: () => Promise<T>): Promise<T> {
   }
 }
 
-beforeEach(() => resetVaultForTests());
+beforeEach(async () => { await resetVaultForTests(); });
 
 describe("token_ref plumbing: connect mints a handle, the engine redeems it once", () => {
   it("carries a live handle to the engine, which redeems the real token exactly once", async () => {
     const scan = session();
     const REAL_TOKEN = "ya29.the-real-readonly-token";
-    const ref = mintTokenRef(scan.id, REAL_TOKEN); // as the connect callback does
+    const ref = await mintTokenRef(scan.id, REAL_TOKEN); // as the connect callback does
 
     const captured: Captured = { tokenRef: undefined, requestValid: false };
     const srv = await startRedeemingServer(APP_SECRET, captured);
     try {
       const signed = issueContract(scan, OWNER);
-      const ledger = await withEngineUrl(srv.url, () =>
-        runScan(signed, OWNER, { tokenRef: tokenRefForSession(scan.id) }),
+      const ledger = await withEngineUrl(srv.url, async () =>
+        runScan(signed, OWNER, { tokenRef: await tokenRefForSession(scan.id) }),
       );
 
       expect(captured.requestValid).toBe(true); // wire request still schema-valid with a token_ref
@@ -92,8 +92,8 @@ describe("token_ref plumbing: connect mints a handle, the engine redeems it once
       expect(ledger.items.length).toBeGreaterThan(0);
 
       // single-use: the handle is spent — a replay gets nothing
-      expect(redeemTokenRef(ref)).toBeUndefined();
-      expect(tokenRefForSession(scan.id)).toBeUndefined();
+      expect(await redeemTokenRef(ref)).toBeUndefined();
+      expect(await tokenRefForSession(scan.id)).toBeUndefined();
     } finally {
       await srv.close();
     }
@@ -106,8 +106,8 @@ describe("token_ref plumbing: connect mints a handle, the engine redeems it once
     const srv = await startRedeemingServer(APP_SECRET, captured);
     try {
       const signed = issueContract(scan, OWNER);
-      const ledger = await withEngineUrl(srv.url, () =>
-        runScan(signed, OWNER, { tokenRef: tokenRefForSession(scan.id) }),
+      const ledger = await withEngineUrl(srv.url, async () =>
+        runScan(signed, OWNER, { tokenRef: await tokenRefForSession(scan.id) }),
       );
       expect(captured.requestValid).toBe(true);
       expect(captured.tokenRef).toBeNull();

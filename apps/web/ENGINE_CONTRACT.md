@@ -218,9 +218,12 @@ and sends it as `token_ref`. Lifecycle:
   malformed. A failed-auth attempt does NOT consume the handle. The engine must
   send the HMAC; only a caller holding `CONTRACT_SIGNING_SECRET` can redeem.
 
-  Production still requires a **shared TTL store** (e.g. Redis) behind the vault
-  — the in-process Map (`lib/token-vault.ts`) is dev-only, so redeem only works
-  when the web app is a single instance until that swap lands.
+  The vault is driver-backed (`lib/vault/`): with `DATABASE_URL` set it uses a
+  **shared Postgres table** (`sk_token_vault`) — any instance can mint and any
+  instance can serve the redeem, single-use enforced atomically
+  (`DELETE ... RETURNING`), tokens AES-256-GCM encrypted at rest so no
+  plaintext token is ever stored. Without `DATABASE_URL` it falls back to the
+  in-process dev vault (single instance only).
 
 **Settled (both sides implement the transport above):**
 - Stale-revisit scans **fall back to the fixture** — the engine treats any
@@ -236,5 +239,5 @@ Web-side **mint + carry + redeem endpoint** are wired and tested
 matching redeem client and the live Gmail fetch behind it: it redeems the
 handle once, confirms with Gmail that the token is bound to exactly the
 contract's `allowed_inbox_email` (refusing `email_mismatch` otherwise), and
-runs the detector read-only. The **shared TTL store** noted above is the one
-remaining infra piece.
+runs the detector read-only. The shared TTL store is implemented (Postgres,
+above) — no separate infra piece remains.

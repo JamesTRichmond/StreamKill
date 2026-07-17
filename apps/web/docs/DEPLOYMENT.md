@@ -40,10 +40,11 @@ Never commit any of these. `.env*` is gitignored.
 
 ## 4. Known production gaps (tracked, not silent)
 
-- **Token vault is in-process** (`lib/token-vault.ts`): the `token_ref` mint/
-  redeem handshake requires a single web instance until it is backed by a
-  shared TTL store (e.g. Redis). Scale to one instance, or land the Redis swap
-  before scaling out. See `ENGINE_CONTRACT.md §7`.
+- **Token vault**: with `DATABASE_URL` set, the `token_ref` mint/redeem
+  handshake uses a shared Postgres table (tokens encrypted at rest, single-use
+  enforced atomically), so multiple web instances are safe. Without a database
+  the vault is in-process and requires a single instance. See
+  `ENGINE_CONTRACT.md §7`.
 - **Engine service** (`ENGINE_URL`) is the private Python engine; until it is
   deployed, scans return the sample ledger.
 

@@ -7,10 +7,13 @@ import { verifyReceipt, issueApprovalReceipt } from "@/lib/proof";
 import { receiptsForUser, receiptForItem, deleteUserData, type ScanSession, type User } from "@/lib/store";
 import type { LeakItem } from "@/lib/ledger";
 
-const DATA_FILE = path.join(
-  process.env.STREAMKILL_DATA_DIR ?? os.tmpdir(),
-  "streamkill.json",
+// Each test file gets its own data dir: vitest runs files in parallel workers,
+// and a shared JSON store would let one file's cleanup race another's writes.
+process.env.STREAMKILL_DATA_DIR = path.join(
+  os.tmpdir(),
+  `sk-test-${path.basename(__filename ?? "x").replace(/\W/g, "-")}-${process.pid}`,
 );
+const DATA_FILE = path.join(process.env.STREAMKILL_DATA_DIR, "streamkill.json");
 
 beforeEach(() => {
   try {

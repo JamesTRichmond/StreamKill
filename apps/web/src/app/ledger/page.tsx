@@ -83,7 +83,7 @@ export default async function LedgerPage({
   // handle (if still live) so the engine can do the live receipt fetch. On a
   // stale revisit the handle is gone (undefined) — the engine falls back to the
   // fixture rather than dead-ending the owner.
-  const tokenRef = tokenRefForSession(scan.id);
+  const tokenRef = await tokenRefForSession(scan.id);
   let ledger;
   try {
     ledger = await runScan(signed, signed?.contract.allowed_inbox_email ?? "", { tokenRef });
