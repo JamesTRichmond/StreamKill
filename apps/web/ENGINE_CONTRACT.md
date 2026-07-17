@@ -197,7 +197,8 @@ and sends it as `token_ref`. Lifecycle:
 - **Mint** — at Gmail connect (after the email-match gate), the web app stores
   the read-only access token against an opaque handle `skref_<uuid>`, TTL ~2 min,
   one live handle per scan session. The raw token never touches disk or the
-  browser. Dev implementation: in-process vault, `apps/web/src/lib/token-vault.ts`.
+  browser. Vault facade: `apps/web/src/lib/token-vault.ts` (driver-backed —
+  shared Postgres with `DATABASE_URL`, in-process otherwise; see Redeem below).
 - **Carry** — the handle travels to the engine as `token_ref` in the scan
   request (§1). If it is missing/expired on a later revisit, `token_ref` is
   `null` and the engine falls back to the fixture rather than failing (the
