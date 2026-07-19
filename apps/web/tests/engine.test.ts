@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import http from "node:http";
+import type { AddressInfo } from "node:net";
 import { runScan, cancelSubscription, ExecutionRefused } from "@/lib/engine";
 import { issueContract, sign } from "@/lib/contract";
 import type { ExecutionContract, ScanSession, SignedContract } from "@/lib/store";
@@ -59,6 +61,51 @@ describe("engine boundary — runScan gate", () => {
     const ledger = await runScan(signed, OWNER);
     expect(Array.isArray(ledger.items)).toBe(true);
     expect(ledger.items.length).toBeGreaterThan(0);
+  });
+});
+
+// Stub ENGINE_URL server answering every POST with a fixed status/body, so we
+// can assert exactly how the client translates engine responses.
+async function withStubEngine<T>(
+  status: number,
+  body: string,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const server = http.createServer((_req, res) => {
+    res.writeHead(status, { "content-type": "application/json" });
+    res.end(body);
+  });
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+  const { port } = server.address() as AddressInfo;
+  const prev = process.env.ENGINE_URL;
+  process.env.ENGINE_URL = `http://127.0.0.1:${port}/scan`;
+  try {
+    return await fn();
+  } finally {
+    if (prev === undefined) delete process.env.ENGINE_URL;
+    else process.env.ENGINE_URL = prev;
+    await new Promise<void>((r) => server.close(() => r()));
+  }
+}
+
+describe("engine boundary — §3/§5 refusal codes surface through the client", () => {
+  const scan = () => runScan(issueContract(session(), OWNER), OWNER);
+
+  it("surfaces each allowlisted refusal code as engine_<code> with precise copy", async () => {
+    for (const code of ["bad_signature", "expired", "email_mismatch", "action_not_allowed", "cancel_not_allowed"]) {
+      const got = await withStubEngine(403, JSON.stringify({ error: code }), () => refusalCode(scan));
+      expect(got).toBe(`engine_${code}`);
+    }
+  });
+
+  it("keeps the generic code for unknown or malformed refusal bodies (engine input is untrusted)", async () => {
+    for (const body of [JSON.stringify({ error: "made_up_code" }), "not json {", "", JSON.stringify({})]) {
+      expect(await withStubEngine(403, body, () => refusalCode(scan))).toBe("engine_refused");
+    }
+  });
+
+  it("maps 5xx to engine_error, not a refusal", async () => {
+    expect(await withStubEngine(500, JSON.stringify({ error: "boom" }), () => refusalCode(scan))).toBe("engine_error");
   });
 });
 

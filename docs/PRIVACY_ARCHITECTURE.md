@@ -151,6 +151,36 @@ Production target:
 - Audit logs without sensitive content.
 - Minimal retained ledger history.
 
+## Implemented Today
+
+The principles above started as demo policy. The following are now shipped,
+enforced-in-code facts in the web app (`apps/web`) and the private engine,
+each locked by tests:
+
+- **Mailbox binding.** There is no free-text email field anywhere. The only
+  inbox StreamKill can scan is the Google account the user signed in with,
+  re-verified against Gmail's own answer for the granted token — and verified
+  a second time, independently, by the engine before it reads anything.
+- **Signed execution contracts.** Every scan runs under a short-lived (15 min)
+  HMAC-signed contract naming the one allowed inbox and the allowed actions.
+  Two independent gates verify it: the web boundary and the engine
+  (`apps/web/ENGINE_CONTRACT.md`). `cancel_subscription` is `false` in every
+  contract issued; the engine hard-refuses any contract where it is not.
+- **Least-privilege Gmail access.** The OAuth request is read-only
+  (`gmail.readonly`), locked by tests that fail if the scope ever widens.
+- **Short-lived, single-use token handling.** The Gmail access token is never
+  sent to the browser and never written to disk in plaintext. It is held
+  behind a single-use handle with a ~2 minute TTL; the engine exchanges the
+  handle exactly once per scan. With a database configured, stored tokens are
+  AES-256-GCM encrypted at rest — the "encrypted token storage" production
+  target above is shipped.
+- **Action-specific consent.** Approval to scan is a separate act from
+  approval to cancel, and cancellation approval is per item (the Kill Room).
+  There is no automated cancellation path in the product today; the engine
+  refuses contracts that claim otherwise.
+- **User-controlled deletion.** Disconnecting deletes the user's StreamKill
+  data and ends the session.
+
 ## Plain-English Stakeholder Statement
 
 StreamKill is private by design because the system is built to throw away everything it does not need.

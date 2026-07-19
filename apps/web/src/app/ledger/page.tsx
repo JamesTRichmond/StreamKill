@@ -9,6 +9,7 @@ import {
   saveContract,
 } from "@/lib/store";
 import { runScan, ExecutionRefused } from "@/lib/engine";
+import { refusalUx } from "@/lib/refusal-ux";
 import { issueContract, isExpired } from "@/lib/contract";
 import { tokenRefForSession } from "@/lib/token-vault";
 
@@ -89,6 +90,9 @@ export default async function LedgerPage({
     ledger = await runScan(signed, signed?.contract.allowed_inbox_email ?? "", { tokenRef });
   } catch (err) {
     const refused = err instanceof ExecutionRefused;
+    // Recovery matches the specific refusal: reconnect for an email mismatch,
+    // retry this session for transient engine trouble, fresh scan otherwise.
+    const ux = refusalUx(refused ? (err as ExecutionRefused).code : undefined, scan.id);
     return (
       <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 px-6 py-24 font-sans dark:bg-black">
         <main className="w-full max-w-md text-center">
@@ -96,7 +100,7 @@ export default async function LedgerPage({
             🛑
           </div>
           <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">
-            Engine refused to run
+            {ux.headline}
           </h1>
           <p className="mt-3 text-zinc-600 dark:text-zinc-400">
             {refused
@@ -109,10 +113,10 @@ export default async function LedgerPage({
           </p>
           <div className="mt-6 flex justify-center">
             <a
-              href="/scan"
+              href={ux.action.href}
               className="inline-flex h-11 items-center rounded-full bg-black px-5 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
             >
-              Start over
+              {ux.action.label}
             </a>
           </div>
         </main>

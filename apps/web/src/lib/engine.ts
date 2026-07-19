@@ -94,15 +94,41 @@ async function callEngine(
     throw new ExecutionRefused("engine_unreachable", "The scan engine is unreachable. Try again shortly.");
   }
   if (res.status === 403) {
-    throw new ExecutionRefused(
-      "engine_refused",
-      "The engine refused the contract (email mismatch, or invalid/expired contract).",
-    );
+    throw await engineRefusal(res);
   }
   if (!res.ok) {
     throw new ExecutionRefused("engine_error", `Engine returned HTTP ${res.status}.`);
   }
   return (await res.json()) as Ledger;
+}
+
+// §3/§5: a refusal is 403 { "error": "<code>" }. Surface the precise code —
+// namespaced engine_* so logs/UI can tell Gate #2's verdict apart from this
+// module's own Gate #1 codes. The body is engine-controlled input: only
+// allowlisted codes pass through; anything else (unknown code, garbage body)
+// stays the generic refusal rather than being echoed onward.
+const ENGINE_REFUSALS: Record<string, string> = {
+  bad_signature: "The engine rejected the contract signature. Start the scan again.",
+  expired: "The engine found the contract expired. Start the scan again.",
+  email_mismatch: "The engine refused: the contract and connected inbox don't match. Reconnect the verified inbox.",
+  action_not_allowed: "The engine refused: this contract does not permit scanning.",
+  cancel_not_allowed: "The engine refused the contract: cancellation is not permitted.",
+};
+
+async function engineRefusal(res: Response): Promise<ExecutionRefused> {
+  let code: unknown;
+  try {
+    ({ error: code } = (await res.json()) as { error?: unknown });
+  } catch {
+    // fall through to the generic refusal
+  }
+  if (typeof code === "string" && Object.hasOwn(ENGINE_REFUSALS, code)) {
+    return new ExecutionRefused(`engine_${code}`, ENGINE_REFUSALS[code]);
+  }
+  return new ExecutionRefused(
+    "engine_refused",
+    "The engine refused the contract (email mismatch, or invalid/expired contract).",
+  );
 }
 
 // Cancellation is intentionally a stub. No route exposes it yet. It refuses
