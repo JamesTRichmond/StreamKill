@@ -32,8 +32,13 @@ jobs:
       - uses: actions/github-script@v7
         with:
           script: |
-            const tag = core.getInput("tag", { required: true }) || context.payload.inputs.tag;
-            const sha = context.payload.inputs.sha ||
+            // workflow_dispatch inputs live on the event payload, not action inputs
+            const tag = context.payload.inputs?.tag;
+            if (!tag) {
+              core.setFailed("The 'tag' input is required.");
+              return;
+            }
+            const sha = context.payload.inputs?.sha ||
               (await github.rest.repos.getBranch({ ...context.repo, branch: "main" })).data.commit.sha;
 
             if (!/^v\d+\.\d+\.\d+$/.test(tag)) {
