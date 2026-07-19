@@ -195,7 +195,8 @@ describe("end-to-end: runScan ⇄ mock engine over HTTP", () => {
 
   it("defense in depth: engine independently 403s a contract signed with a different secret", async () => {
     // The app accepts its own signature (its secret) but the engine verifies
-    // with a DIFFERENT secret and rejects → web maps 403 to engine_refused.
+    // with a DIFFERENT secret and rejects → web surfaces the engine's precise
+    // §3 code, namespaced engine_* to mark it as Gate #2's verdict.
     const server = createMockServer({ secret: "a-different-engine-secret" });
     await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
     const { port } = server.address() as AddressInfo;
@@ -208,7 +209,7 @@ describe("end-to-end: runScan ⇄ mock engine over HTTP", () => {
           code = e instanceof ExecutionRefused ? e.code : `OTHER:${String(e)}`;
         }
       });
-      expect(code).toBe("engine_refused");
+      expect(code).toBe("engine_bad_signature");
     } finally {
       await new Promise<void>((r) => server.close(() => r()));
     }
