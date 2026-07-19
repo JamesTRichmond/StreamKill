@@ -1,0 +1,65 @@
+name: tag-release
+
+# Manual escape hatch for cutting release tags.
+#
+# Why this exists: the repo setting "Allow GitHub Actions to create and approve
+# pull requests" is disabled, so Release Please cannot open its release PR
+# (its branch + changelog work, and #32 was merged manually). Release Please
+# also skips tagging for release PRs it did not create/label. Tag pushes
+# through the local git proxy are dropped, so this workflow creates the tag
+# with the Actions token instead — contents: write is permitted.
+#
+# Usage: Actions -> tag-release -> Run workflow, or POST a workflow_dispatch
+# with inputs {tag, sha}. Refuses to move an existing tag.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag name (e.g. v0.2.0)"
+        required: true
+      sha:
+        description: "Commit SHA to tag (defaults to current main HEAD)"
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = core.getInput("tag", { required: true }) || context.payload.inputs.tag;
+            const sha = context.payload.inputs.sha ||
+              (await github.rest.repos.getBranch({ ...context.repo, branch: "main" })).data.commit.sha;
+
+            if (!/^v\d+\.\d+\.\d+$/.test(tag)) {
+              core.setFailed(`Tag '${tag}' must look like vX.Y.Z`);
+              return;
+            }
+
+            // Refuse to move an existing tag — tags are immutable here.
+            try {
+              await github.rest.git.getRef({ ...context.repo, ref: `tags/${tag}` });
+              core.setFailed(`Tag ${tag} already exists; refusing to move it.`);
+              return;
+            } catch (e) {
+              if (e.status !== 404) throw e;
+            }
+
+            const annotated = await github.rest.git.createTag({
+              ...context.repo,
+              tag,
+              message: `StreamKill ${tag}`,
+              object: sha,
+              type: "commit",
+            });
+            await github.rest.git.createRef({
+              ...context.repo,
+              ref: `refs/tags/${tag}`,
+              sha: annotated.data.sha,
+            });
+            core.notice(`Created ${tag} at ${sha}`);
