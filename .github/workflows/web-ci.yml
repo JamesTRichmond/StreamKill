@@ -54,3 +54,19 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
+      - name: Smoke test the production build
+        env:
+          AUTH_SECRET: ci-smoke-secret
+          CONTRACT_SIGNING_SECRET: ci-smoke-secret
+          AUTH_GOOGLE_ID: ci-client
+          AUTH_GOOGLE_SECRET: ci-client-secret
+          PORT: "3100"
+        run: |
+          npm run start &
+          SERVER_PID=$!
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://localhost:3100/ && break
+            sleep 1
+          done
+          BASE_URL=http://localhost:3100 SMOKE_SECRET=ci-smoke-secret npm run smoke
+          kill $SERVER_PID

@@ -15,7 +15,7 @@ beforeEach(async () => { await resetVaultForTests(); });
 describe("engine token redemption endpoint (ENGINE_CONTRACT §7)", () => {
   it("returns the token once for a valid, correctly-signed request", async () => {
     const ref = await mintTokenRef("sess-1", TOKEN);
-    const res = await await handleRedeem({ tokenRef: ref, signature: sign(ref) });
+    const res = await handleRedeem({ tokenRef: ref, signature: sign(ref) });
     expect(res).toEqual({ status: 200, body: { access_token: TOKEN } });
   });
 
